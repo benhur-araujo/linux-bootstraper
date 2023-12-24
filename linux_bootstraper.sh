@@ -3,7 +3,6 @@
 # Since I have 2 computers running Ubuntu 23.10 and I'm having a hard time keeping their configs synced, \
 # I created this script to do that for me.
 
-
 bootstrap_dir=~/studies/projects/shell-scripts/linux-bootstraper
 
 ########## Add APT Repositories ###########
@@ -30,7 +29,7 @@ add_apt_repos() {
 install_apt_apps() {
     sudo apt update -y && \
         sudo apt install -y vim-gtk3 tree git zsh bash-completion flameshot tilix jq yq \
-        wget gpg curl gnupg software-properties-common terraform apt-transport-https code xdotool
+        wget gpg curl gnupg software-properties-common terraform apt-transport-https code xdotool chrome-gnome-shell gnome-browser-connector
 }
 
 ########## Non-package manager Installations ##########
@@ -120,7 +119,7 @@ config_apps() {
 gnome_settings() {
     # Ubuntu Dock
     gsettings set org.gnome.shell.extensions.dash-to-dock extend-height false
-    gsettings set org.gnome.shell.extensions.dash-to-dock dash-max-icon-size 25
+    gsettings set org.gnome.shell.extensions.dash-to-dock dash-max-icon-size 20
 
     # Keyboard layout - Logitech K380
     gsettings set org.gnome.desktop.input-sources sources "[('xkb', 'us+alt-intl'), ('xkb', 'br')]"
@@ -141,7 +140,7 @@ gnome_settings() {
     gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/ command 'gnome-control-center bluetooth'
     gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/ binding '<Ctrl><Alt>b'
     gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom1/ name 'flameshot'
-    gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom1/ command '/usr/bin/flameshot gui'
+    gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom1/ command 'sh -c -- "flameshot gui"'
     gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom1/ binding 'Print'
     gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom2/ name 'Mute Mic'
     gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom2/ command 'amixer set Capture toggle'
@@ -159,12 +158,32 @@ gnome_settings() {
     gsettings set org.gnome.shell.keybindings show-screenshot-ui "[]"
 }
 
+gnome_extensions() {
+    # Credits: https://unix.stackexchange.com/questions/617288/command-line-tool-to-install-gnome-shell-extensions
+
+    local extensions=(https://extensions.gnome.org/extension/4839/clipboard-history/
+                      https://extensions.gnome.org/extension/1386/notification-counter)
+
+    for extension in "${extensions[@]}"; do
+        EXTENSION_ID=$(curl -s $extension | grep -oP 'data-uuid="\K[^"]+')
+        VERSION_TAG=$(curl -Lfs "https://extensions.gnome.org/extension-query/?search=$EXTENSION_ID" | jq '.extensions[0] | .shell_version_map | map(.pk) | max')
+        wget -O ${EXTENSION_ID}.zip "https://extensions.gnome.org/download-extension/${EXTENSION_ID}.shell-extension.zip?version_tag=$VERSION_TAG"
+        gnome-extensions install --force ${EXTENSION_ID}.zip
+        if ! gnome-extensions list | grep --quiet ${EXTENSION_ID}; then
+            busctl --user call org.gnome.Shell.Extensions /org/gnome/Shell/Extensions org.gnome.Shell.Extensions InstallRemoteExtension s ${EXTENSION_ID}
+        fi
+        gnome-extensions enable ${EXTENSION_ID}
+        rm ${EXTENSION_ID}.zip
+    done
+}
+
 main() {
     add_apt_repos
     install_apt_apps
     install_non-apt_apps
     config_apps
     gnome_settings
+    gnome_extensions
 }
 
 set -exo pipefail
