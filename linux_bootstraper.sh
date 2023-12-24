@@ -65,6 +65,20 @@ install_non-apt_apps() {
         curl -o /tmp/mega.deb https://mega.nz/linux/repo/xUbuntu_23.10/amd64/megasync-xUbuntu_23.10_amd64.deb
         sudo apt install /tmp/mega.deb
     fi
+
+    # kubectl
+    curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+    sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+    rm -f kubectl
+
+    # docker
+    if [ -z "$(dpkg -l | grep docker)" ]; then
+        curl -fsSL https://get.docker.com -o get-docker.sh
+        sudo sh get-docker.sh
+        sudo usermod -aG docker $USER
+        newgrp docker
+        rm -f get-docker.sh
+    fi
 }
 
 ########## Configure Applications ###########
@@ -114,6 +128,7 @@ config_apps() {
     #fi   
     cat "$bootstrap_dir"/zshrc > ~/.zshrc
 }
+
 
 ########## Gnome Settings ##########
 gnome_settings() {
