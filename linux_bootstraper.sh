@@ -3,6 +3,9 @@
 # Since I have 2 computers running Ubuntu 23.10 and I'm having a hard time keeping their configs synced, \
 # I created this script to do that for me.
 
+
+bootstrap_dir=~/studies/projects/shell-scripts/linux-bootstraper
+
 ########## Add APT Repositories ###########
 add_apt_repos() {
     # Terraform
@@ -87,8 +90,9 @@ config_apps() {
     dconf write /com/gexperts/Tilix/keybindings/win-switch-to-previous-session "'<Ctrl><Shift>Tab'"
     dconf write /com/gexperts/Tilix/keybindings/win-switch-to-next-session "'<Ctrl><Tab'"
     dconf write /com/gexperts/Tilix/keybindings/terminal-close "'<Ctrl><Shift>w'"
+
     # vim
-    cat ./vimrc  > ~/.vimrc
+    cat "$bootstrap_dir"/vimrc > ~/.vimrc
 
     # ZSH
     #if [ ! -d ~/.oh-my-zsh/custom/plugins/zsh-autosuggestions ]; then
@@ -109,7 +113,7 @@ config_apps() {
     #     fi
 
     #fi   
-    cat ./zshrc > ~/.zshrc
+    cat "$bootstrap_dir"/zshrc > ~/.zshrc
 }
 
 ########## Gnome Settings ##########
@@ -143,7 +147,7 @@ gnome_settings() {
     gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom2/ command 'amixer set Capture toggle'
     gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom2/ binding '<Ctrl><Alt>m'
     gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom3/ name 'Put Focus Next Monitor'
-    gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom3/ command 'bash ~/mega/studies/projects/shell-scripts/linux-bootstraper/swap-screens.sh'
+    gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom3/ command "bash $bootstrap_dir/swap-screens.sh"
     gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom3/ binding '<Super>Tab'
     gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom4/ name 'Sound Settings'
     gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom4/ command 'gnome-control-center sound'
