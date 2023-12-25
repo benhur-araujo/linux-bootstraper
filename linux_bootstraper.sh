@@ -3,7 +3,7 @@
 # Since I have 2 computers running Ubuntu 23.10 and I'm having a hard time keeping their configs synced, \
 # I created this script to do that for me.
 
-set -exo pipefail
+set -eo pipefail
 bootstrap_dir=~/studies/projects/shell-scripts/linux-bootstraper
 
 # Display how to use this script
@@ -32,16 +32,16 @@ get_opt() {
 ########## Add APT Repositories ###########
 add_apt_repos() {
     # Terraform
-    if [[ -z "$(apt list --installed | grep 'terraform.*installed')" || "$1" == "--full" ]]; then
-        wget -O- https://apt.releases.hashicorp.com/gpg | \
-            gpg --dearmor | sudo tee /usr/share/keyrings/hashicorp-archive-keyring.gpg
+    if [[ -z "$(apt list --installed 2>/dev/null | grep 'terraform.*installed')" || "$1" == "--full" ]]; then
+        curl -sL -o gpg https://apt.releases.hashicorp.com/gpg 
+        gpg --dearmor gpg && sudo mv -f gpg.gpg /usr/share/keyrings/hashicorp-archive-keyring.gpg
         echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] \
-            https://apt.releases.hashicorp.com jammy main" | \
-            sudo tee /etc/apt/sources.list.d/hashicorp.list
+            https://apt.releases.hashicorp.com jammy main" | sudo tee /etc/apt/sources.list.d/hashicorp.list > /dev/null
+        rm gpg
     fi
-    
+
     # vscode
-    if [[ -z "$(apt list --installed | grep "^code.*installed")" || "$1" == "--full" ]]; then
+    if [[ -z "$(apt list --installed 2>/dev/null | grep "^code.*installed")" || "$1" == "--full" ]]; then
         wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > packages.microsoft.gpg
         sudo install -D -o root -g root -m 644 packages.microsoft.gpg /etc/apt/keyrings/packages.microsoft.gpg
         sudo sh -c 'echo "deb [arch=amd64,arm64,armhf signed-by=/etc/apt/keyrings/packages.microsoft.gpg] https://packages.microsoft.com/repos/code stable main" > /etc/apt/sources.list.d/vscode.list'
@@ -51,18 +51,25 @@ add_apt_repos() {
 
 ########## Install APT Packages ##########
 install_apt_apps() {
-    sudo apt update -y && \
-        sudo apt install -y vim-gtk3 tree git zsh bash-completion flameshot tilix jq yq \
-        wget gpg curl gnupg software-properties-common terraform apt-transport-https code xdotool chrome-gnome-shell gnome-browser-connector
+    apt_apps=(vim-gtk3 tree git zsh bash-completion flameshot tilix jq yq \
+              wget gpg curl gnupg software-properties-common terraform apt-transport-https \
+              code xdotool chrome-gnome-shell gnome-browser-connector xclip)
+    echo "### APT Packages ###"
+    sudo apt update -y > /dev/null 2>&1
+    sudo apt install -y "${apt_apps[@]}" > /dev/null 2>&1
+    echo "Installed Packages: ${apt_apps[@]}"    
 }
 
 ########## Non-package manager Installations ##########
 install_non-apt_apps() {
+    echo -e "\n### Non-APT Packages ###"
     # Google Chrome
     if [[ -z "$(dpkg -l | grep google-chrome)" || "$1" == "--full" ]]; then
-        curl -o /tmp/chrome.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
-        sudo dpkg -i /tmp/chrome.deb
+        curl -sL -o /tmp/chrome.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+        sudo dpkg -i /tmp/chrome.deb > /dev/null
         echo "Chrome Installed"
+    else
+        echo "Chrome already installed"
     fi
 
     # Oh My Zsh
@@ -72,9 +79,11 @@ install_non-apt_apps() {
         fi
         curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh -o install.sh
         sed -i '/exec\ zsh\ -l/d' install.sh
-        bash install.sh
+        bash install.sh > /dev/null 2>&1
         echo "Oh My Zsh installed"
         rm install.sh
+    else
+        echo "oh-my-zsh already installed"
     fi
 
     # asdf
@@ -83,65 +92,89 @@ install_non-apt_apps() {
         if [ -d ~/.asdf ]; then
             rm -rf ~/.asdf
         fi
-        git clone https://github.com/asdf-vm/asdf.git ~/.asdf --branch "$asdf_latest_version"
+        git clone -q https://github.com/asdf-vm/asdf.git ~/.asdf --branch "$asdf_latest_version" > /dev/null 2>&1
         echo "asdf Installed"
         
-        if [ -z "$(grep "plugins=(.*asdf.*)" ~/.zshrc)" ]; then
-                plugins="$(grep "^plugins=(.*.)" ~/.zshrc | sed 's/)$//')"
-                plugins="$plugins asdf)"
-                sed -i "s/^plugins=.*/$plugins/" ~/.zshrc
-        fi  
+        #if [ -z "$(grep "plugins=(.*asdf.*)" ~/.zshrc)" ]; then
+        #        plugins="$(grep "^plugins=(.*.)" ~/.zshrc | sed 's/)$//')"
+        #        plugins="$plugins asdf)"
+        #        sed -i "s/^plugins=.*/$plugins/" ~/.zshrc
+        #fi
+    else
+        echo "asdf already installed"
+
     fi
 
     # mega
-    if [[ -z "$(apt list --installed | grep 'mega.*installed')" || "$1" == "--full" ]]; then
-        curl -o /tmp/mega.deb https://mega.nz/linux/repo/xUbuntu_23.10/amd64/megasync-xUbuntu_23.10_amd64.deb
-        sudo apt install /tmp/mega.deb
+    if [[ -z "$(apt list --installed 2>/dev/null | grep 'mega.*installed')" || "$1" == "--full" ]]; then
+        curl -sL -o /tmp/mega.deb https://mega.nz/linux/repo/xUbuntu_23.10/amd64/megasync-xUbuntu_23.10_amd64.deb
+        sudo apt install /tmp/mega.deb > /dev/null 2>&1
+        echo "Mega Installed"
+    else
+        echo "Mega already installed"
     fi
 
     # kubectl
     if [[ ! -f /usr/local/bin/kubectl || "$1" == "--full" ]]; then
-        curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+        curl -sLO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
         sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+        echo "Kubectl Installed"
         rm -f kubectl
+    else 
+        echo "kubectl already installed"
     fi
 
     # docker
     if [[ -z "$(dpkg -l | grep docker)" || "$1" == "--full" ]]; then
         curl -fsSL https://get.docker.com -o get-docker.sh
-        sudo sh get-docker.sh
+        sed -i 's/sleep\ 20/sleep\ 1/' get-docker.sh
+        sudo sh get-docker.sh > /dev/null 2>&1
         sudo usermod -aG docker $USER
+        echo "Docker Installed"
         rm -f get-docker.sh
+    else
+        echo "Docker already installed"
     fi
     
     # Discord
-    if [[ -z "$(apt list --installed | grep "^discord.*installed")" || "$1" == "--full" ]]; then
-        wget "https://discord.com/api/download?platform=linux&format=deb" -O discord.deb
-        sudo apt install ./discord.deb
+    if [[ -z "$(apt list --installed 2>/dev/null | grep "^discord.*installed")" || "$1" == "--full" ]]; then
+        wget -q "https://discord.com/api/download?platform=linux&format=deb" -O discord.deb
+        sudo apt install ./discord.deb > /dev/null 2>&1
+        echo "Discord Installed"
         rm -f discord.deb
+    else
+        echo "Discord already installed"
     fi
 
     # AWS-CLI
     if [[ ! -f /usr/local/bin/aws || "$1" == "--full" ]]; then
-        curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-        unzip awscliv2.zip
+        curl -sL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+        unzip awscliv2.zip > /dev/null
         if [ -d /usr/local/aws-cli/v2/current ]; then
-            sudo ./aws/install --update
+            sudo ./aws/install --update > /dev/null
+            echo "AWS CLI Updated"
         else
-            sudo ./aws/install 
+            sudo ./aws/install > /dev/null
+            echo "AWS CLI Installed"
         fi
         rm -f awscliv2.zip
         rm -rf ./aws
+    else
+        echo "aws-cli already installed"
     fi
     
     # AZURE-CLI
     if [[ -z "$(dpkg -l | grep azure-cli)" || "$1" == "--full" ]]; then
-        curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+        curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash > /dev/null
+        echo "az-cli Installed"
+    else
+        echo "az-cli already installed"
     fi
 }
 
 ########## Configure Applications ###########
 config_apps() {
+    echo -e "\n### Apply Apps configs ###"
     # Tilix as default
     sudo update-alternatives --install /usr/bin/x-terminal-emulator x-terminal-emulator /usr/bin/tilix 100
     sudo update-alternatives --set x-terminal-emulator /usr/bin/tilix
@@ -162,13 +195,16 @@ config_apps() {
     dconf write /com/gexperts/Tilix/keybindings/win-switch-to-previous-session "'<Ctrl><Shift>Tab'"
     dconf write /com/gexperts/Tilix/keybindings/win-switch-to-next-session "'<Ctrl><Tab'"
     dconf write /com/gexperts/Tilix/keybindings/terminal-close "'<Ctrl><Shift>w'"
+    echo "Tilix Configured"
 
     # vim
     cat "$bootstrap_dir"/vimrc > ~/.vimrc
+    echo "Vim configured"
 
     # ZSH
     if [ ! -d ~/.oh-my-zsh/custom/plugins/zsh-autosuggestions ]; then
-        git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions
+        git clone -q https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions
+        echo "zsh-autosuggestions Installed"
     #    if [ -z $(grep "plugins=(.*zsh-autosuggestions.*)" ~/.zshrc) ]; then
     #        plugins="$(grep "^plugins=(.*.)" ~/.zshrc | sed 's/)$//')"
     #        plugins="$plugins zsh-autosuggestions)"
@@ -176,12 +212,15 @@ config_apps() {
     #    fi
     elif [[ -d ~/.oh-my-zsh/plugins/zsh-autosuggestions && "$1" == "--full" ]]; then
         rm -rf ~/.oh-my-zsh/plugins/zsh-autosuggestions
-        git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting
-    
+        git clone -q https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting
+        echo "zsh-autosuggestions Updated"
+    else
+        echo "zsh-autosuggestions already installed"
     fi
     #
     if [ ! -d ~/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting ]; then
-        git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting
+        git clone -q https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting
+        echo "zsh-syntax-highlighting Installed"
     #     if [ -z $(grep "plugins=(.*zsh-syntax-highlighting.*)" ~/.zshrc) ]; then
     #            plugins="$(grep "^plugins=(.*.)" ~/.zshrc | sed 's/)$//')"
     #            plugins="$plugins zsh-syntax-highlighting)"
@@ -189,14 +228,19 @@ config_apps() {
     #     fi
     elif [[ -d ~/.oh-my-zsh/plugins/zsh-syntax-highlighting && "$1" == "--full" ]]; then
         rm -rf ~/.oh-my-zsh/plugins/zsh-syntax-highlighting
-        git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting
+        git clone -q https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting
+        echo "zsh-syntax-highlighting Updated"
+    else
+        echo "zsh-syntax-highlighting already installed"
     fi   
     cat "$bootstrap_dir"/zshrc > ~/.zshrc
+    echo "Zsh configured"
 }
 
 
 ########## Gnome Settings ##########
 gnome_settings() {
+    echo -e "\n### Gnome Preferences ###"
     # Ubuntu Dock
     gsettings set org.gnome.shell.extensions.dash-to-dock extend-height false
     gsettings set org.gnome.shell.extensions.dash-to-dock dash-max-icon-size 20
@@ -236,24 +280,30 @@ gnome_settings() {
     gsettings set org.gnome.settings-daemon.plugins.media-keys home "['<Super>e']"
     gsettings set org.gnome.desktop.wm.keybindings switch-applications "[]"   
     gsettings set org.gnome.shell.keybindings show-screenshot-ui "[]"
+    
+    echo "Gnome preferences applied"
 }
 
 gnome_extensions() {
     # Credits: https://unix.stackexchange.com/questions/617288/command-line-tool-to-install-gnome-shell-extensions
-
+    echo -e "\n### Gnome Extensions ###"
     local extensions=(https://extensions.gnome.org/extension/4839/clipboard-history/
                       https://extensions.gnome.org/extension/1386/notification-counter)
 
     for extension in "${extensions[@]}"; do
-        EXTENSION_ID=$(curl -s $extension | grep -oP 'data-uuid="\K[^"]+')
+        EXTENSION_ID=$(curl -sL $extension | grep -oP 'data-uuid="\K[^"]+')
         VERSION_TAG=$(curl -Lfs "https://extensions.gnome.org/extension-query/?search=$EXTENSION_ID" | jq '.extensions[0] | .shell_version_map | map(.pk) | max')
-        wget -O ${EXTENSION_ID}.zip "https://extensions.gnome.org/download-extension/${EXTENSION_ID}.shell-extension.zip?version_tag=$VERSION_TAG"
-        gnome-extensions install --force ${EXTENSION_ID}.zip
         if ! gnome-extensions list | grep --quiet ${EXTENSION_ID}; then
-            busctl --user call org.gnome.Shell.Extensions /org/gnome/Shell/Extensions org.gnome.Shell.Extensions InstallRemoteExtension s ${EXTENSION_ID}
+            busctl --user call org.gnome.Shell.Extensions /org/gnome/Shell/Extensions org.gnome.Shell.Extensions InstallRemoteExtension s ${EXTENSION_ID} > /dev/null
+            wget -qO ${EXTENSION_ID}.zip "https://extensions.gnome.org/download-extension/${EXTENSION_ID}.shell-extension.zip?version_tag=$VERSION_TAG"
+            gnome-extensions install --force ${EXTENSION_ID}.zip > /dev/null
+            gnome-extensions enable ${EXTENSION_ID}
+            rm ${EXTENSION_ID}.zip
+            echo "$extension Installed"
+        
+        else
+            echo "$extension already installed"
         fi
-        gnome-extensions enable ${EXTENSION_ID}
-        rm ${EXTENSION_ID}.zip
     done
 }
 
