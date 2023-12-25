@@ -119,3 +119,6 @@ prompt_end() {
   printf "\n ➜";
 }
 PROMPT+="$(prompt_end) "
+
+# aws-cli autocomplete
+complete -C '/usr/local/bin/aws_completer' aws

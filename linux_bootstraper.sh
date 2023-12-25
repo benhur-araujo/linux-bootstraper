@@ -3,6 +3,7 @@
 # Since I have 2 computers running Ubuntu 23.10 and I'm having a hard time keeping their configs synced, \
 # I created this script to do that for me.
 
+set -exo pipefail
 bootstrap_dir=~/studies/projects/shell-scripts/linux-bootstraper
 
 ########## Add APT Repositories ###########
@@ -78,6 +79,27 @@ install_non-apt_apps() {
         sudo usermod -aG docker $USER
         newgrp docker
         rm -f get-docker.sh
+    fi
+    
+    # Discord
+    if [ -z "$(apt list --installed | grep "^discord.*installed")" ]; then
+        wget "https://discord.com/api/download?platform=linux&format=deb" -O discord.deb
+        sudo apt install ./discord.deb
+        rm -f discord.deb
+    fi
+
+    # AWS-CLI
+    if [ ! -f /usr/local/bin/aws ]; then
+        curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+        unzip awscliv2.zip
+        sudo ./aws/install
+        rm -f awscliv2.zip
+        rm -rf ./aws
+    fi
+    
+    # AZURE-CLI
+    if [ -z "$(dpkg -l | grep azure-cli)" ]; then
+        curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
     fi
 }
 
@@ -201,5 +223,4 @@ main() {
     gnome_extensions
 }
 
-set -exo pipefail
 main
