@@ -6,19 +6,42 @@
 set -exo pipefail
 bootstrap_dir=~/studies/projects/shell-scripts/linux-bootstraper
 
+# Display how to use this script
+usage() {
+    echo "Usage: $0 --full  # Install or update everything"
+    echo "usage: $0 --diff  # Install not installed packages" 
+    exit 1
+}
+
+# Get script option from the user
+get_opt() {
+    if [ "$#" -eq 1 ]; then
+        case $1 in
+            --full)
+                user_opt="--full";;
+            --diff)
+                user_opt="--diff";;
+            *)
+                usage;;
+        esac
+    else
+        usage
+    fi
+}
+
 ########## Add APT Repositories ###########
 add_apt_repos() {
     # Terraform
-    if [ -z "$(apt list --installed | grep 'terraform.*installed')" ]; then
+    if [[ -z "$(apt list --installed | grep 'terraform.*installed')" || "$1" == "--full" ]]; then
         wget -O- https://apt.releases.hashicorp.com/gpg | \
             gpg --dearmor | sudo tee /usr/share/keyrings/hashicorp-archive-keyring.gpg
         echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] \
             https://apt.releases.hashicorp.com jammy main" | \
             sudo tee /etc/apt/sources.list.d/hashicorp.list
     fi
-
+    
     # vscode
-    if [ -z "$(apt list --installed | grep "^code.*installed")" ]; then
+    if [[ -z "$(apt list --installed | grep "^code.*installed")" || "$1" == "--full" ]]; then
         wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > packages.microsoft.gpg
         sudo install -D -o root -g root -m 644 packages.microsoft.gpg /etc/apt/keyrings/packages.microsoft.gpg
         sudo sh -c 'echo "deb [arch=amd64,arm64,armhf signed-by=/etc/apt/keyrings/packages.microsoft.gpg] https://packages.microsoft.com/repos/code stable main" > /etc/apt/sources.list.d/vscode.list'
@@ -36,21 +59,30 @@ install_apt_apps() {
 ########## Non-package manager Installations ##########
 install_non-apt_apps() {
     # Google Chrome
-    if [ -z "$(dpkg -l | grep google-chrome)" ]; then
+    if [[ -z "$(dpkg -l | grep google-chrome)" || "$1" == "--full" ]]; then
         curl -o /tmp/chrome.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
         sudo dpkg -i /tmp/chrome.deb
         echo "Chrome Installed"
     fi
 
     # Oh My Zsh
-    if [ ! -d ~/.oh-my-zsh ]; then
-        bash -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+    if [[ ! -d ~/.oh-my-zsh || "$1" == "--full" ]]; then
+        if [ -d ~/.oh-my-zsh ]; then
+            rm -rf ~/.oh-my-zsh
+        fi
+        curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh -o install.sh
+        sed -i '/exec\ zsh\ -l/d' install.sh
+        bash install.sh
         echo "Oh My Zsh installed"
+        rm install.sh
     fi
 
     # asdf
-    if [ ! -d ~/.asdf ]; then
+    if [[ ! -d ~/.asdf || "$1" == "--full" ]]; then
         asdf_latest_version="$(git ls-remote --tags --sort=v:refname https://github.com/asdf-vm/asdf.git | awk -F"/" '{print $3}'| tail -1)"
+        if [ -d ~/.asdf ]; then
+            rm -rf ~/.asdf
+        fi
         git clone https://github.com/asdf-vm/asdf.git ~/.asdf --branch "$asdf_latest_version"
         echo "asdf Installed"
         
@@ -62,43 +94,48 @@ install_non-apt_apps() {
     fi
 
     # mega
-    if [ -z "$(apt list --installed | grep 'mega.*installed')" ]; then
+    if [[ -z "$(apt list --installed | grep 'mega.*installed')" || "$1" == "--full" ]]; then
         curl -o /tmp/mega.deb https://mega.nz/linux/repo/xUbuntu_23.10/amd64/megasync-xUbuntu_23.10_amd64.deb
         sudo apt install /tmp/mega.deb
     fi
 
     # kubectl
-    curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-    sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
-    rm -f kubectl
+    if [[ ! -f /usr/local/bin/kubectl || "$1" == "--full" ]]; then
+        curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+        sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+        rm -f kubectl
+    fi
 
     # docker
-    if [ -z "$(dpkg -l | grep docker)" ]; then
+    if [[ -z "$(dpkg -l | grep docker)" || "$1" == "--full" ]]; then
         curl -fsSL https://get.docker.com -o get-docker.sh
         sudo sh get-docker.sh
         sudo usermod -aG docker $USER
-        newgrp docker
         rm -f get-docker.sh
     fi
     
     # Discord
-    if [ -z "$(apt list --installed | grep "^discord.*installed")" ]; then
+    if [[ -z "$(apt list --installed | grep "^discord.*installed")" || "$1" == "--full" ]]; then
         wget "https://discord.com/api/download?platform=linux&format=deb" -O discord.deb
         sudo apt install ./discord.deb
         rm -f discord.deb
     fi
 
     # AWS-CLI
-    if [ ! -f /usr/local/bin/aws ]; then
+    if [[ ! -f /usr/local/bin/aws || "$1" == "--full" ]]; then
         curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
         unzip awscliv2.zip
-        sudo ./aws/install
+        if [ -d /usr/local/aws-cli/v2/current ]; then
+            sudo ./aws/install --update
+        else
+            sudo ./aws/install 
+        fi
         rm -f awscliv2.zip
         rm -rf ./aws
     fi
     
     # AZURE-CLI
-    if [ -z "$(dpkg -l | grep azure-cli)" ]; then
+    if [[ -z "$(dpkg -l | grep azure-cli)" || "$1" == "--full" ]]; then
         curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
     fi
 }
@@ -130,24 +167,30 @@ config_apps() {
     cat "$bootstrap_dir"/vimrc > ~/.vimrc
 
     # ZSH
-    #if [ ! -d ~/.oh-my-zsh/custom/plugins/zsh-autosuggestions ]; then
-    #    git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions
+    if [ ! -d ~/.oh-my-zsh/custom/plugins/zsh-autosuggestions ]; then
+        git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions
     #    if [ -z $(grep "plugins=(.*zsh-autosuggestions.*)" ~/.zshrc) ]; then
     #        plugins="$(grep "^plugins=(.*.)" ~/.zshrc | sed 's/)$//')"
     #        plugins="$plugins zsh-autosuggestions)"
     #        sed -i "s/^plugins=.*/$plugins/" ~/.zshrc
     #    fi
-    #fi
+    elif [[ -d ~/.oh-my-zsh/plugins/zsh-autosuggestions && "$1" == "--full" ]]; then
+        rm -rf ~/.oh-my-zsh/plugins/zsh-autosuggestions
+        git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting
+    
+    fi
     #
-    #if [ ! -d ~/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting ]; then
-    #        git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting
+    if [ ! -d ~/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting ]; then
+        git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting
     #     if [ -z $(grep "plugins=(.*zsh-syntax-highlighting.*)" ~/.zshrc) ]; then
     #            plugins="$(grep "^plugins=(.*.)" ~/.zshrc | sed 's/)$//')"
     #            plugins="$plugins zsh-syntax-highlighting)"
     #            sed -i "s/^plugins=.*/$plugins/" ~/.zshrc
     #     fi
-
-    #fi   
+    elif [[ -d ~/.oh-my-zsh/plugins/zsh-syntax-highlighting && "$1" == "--full" ]]; then
+        rm -rf ~/.oh-my-zsh/plugins/zsh-syntax-highlighting
+        git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting
+    fi   
     cat "$bootstrap_dir"/zshrc > ~/.zshrc
 }
 
@@ -215,12 +258,13 @@ gnome_extensions() {
 }
 
 main() {
-    add_apt_repos
+    get_opt "$@"
+    add_apt_repos "$1"
     install_apt_apps
-    install_non-apt_apps
+    install_non-apt_apps "$1"
     config_apps
     gnome_settings
     gnome_extensions
 }
 
-main
+main "$@"
