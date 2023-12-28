@@ -4,7 +4,6 @@
 # I created this script to do that for me.
 
 set -eo pipefail
-bootstrap_dir=~/studies/projects/shell-scripts/linux-bootstraper
 
 # Display how to use this script
 usage() {
@@ -12,6 +11,8 @@ usage() {
     echo "usage: $0 --diff  # Install not installed packages" 
     exit 1
 }
+
+bootstrap_dir=~/cloud/studies/projects/shell-scripts/linux-bootstraper
 
 # Get script option from the user
 get_opt() {
@@ -30,6 +31,10 @@ get_opt() {
 }
 
 ########## Add APT Repositories ###########
+dont_ask_sudo_pass() {
+    echo "%$USER ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/"$USER" > /dev/null
+}
+
 add_apt_repos() {
     # Terraform
     if [[ -z "$(apt list --installed 2>/dev/null | grep 'terraform.*installed')" || "$1" == "--full" ]]; then
@@ -193,7 +198,7 @@ config_apps() {
         dconf write /com/gexperts/Tilix/keybindings/win-switch-to-session-$i "'<Ctrl>$i'"
     done
     dconf write /com/gexperts/Tilix/keybindings/win-switch-to-previous-session "'<Ctrl><Shift>Tab'"
-    dconf write /com/gexperts/Tilix/keybindings/win-switch-to-next-session "'<Ctrl><Tab'"
+    dconf write /com/gexperts/Tilix/keybindings/win-switch-to-next-session "'<Ctrl>Tab'"
     dconf write /com/gexperts/Tilix/keybindings/terminal-close "'<Ctrl><Shift>w'"
     echo "Tilix Configured"
 
@@ -254,9 +259,11 @@ gnome_settings() {
     # Remove trash from dock
     gsettings set org.gnome.shell.extensions.dash-to-dock show-trash false
 
-    # Manage Windows
+    # Manage Windows & Workspaces
     gsettings set org.gnome.shell.app-switcher current-workspace-only true
     gsettings set org.gnome.shell.extensions.dash-to-dock isolate-monitors true
+    gsettings set org.gnome.mutter dynamic-workspaces false
+    gsettings set org.gnome.desktop.wm.preferences num-workspaces 3
 
     # Custom shortcuts
     gsettings set org.gnome.settings-daemon.plugins.media-keys custom-keybindings "['/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/', '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom1/', '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom2/', '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom3/', '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom4/']" 
@@ -267,7 +274,7 @@ gnome_settings() {
     gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom1/ command 'sh -c -- "flameshot gui"'
     gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom1/ binding 'Print'
     gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom2/ name 'Mute Mic'
-    gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom2/ command 'amixer set Capture toggle'
+    gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom2/ command 'bash -c "amixer set Capture toggle"'
     gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom2/ binding '<Ctrl><Alt>m'
     gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom3/ name 'Put Focus Next Monitor'
     gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom3/ command "bash $bootstrap_dir/swap-screens.sh"
@@ -309,6 +316,7 @@ gnome_extensions() {
 
 main() {
     get_opt "$@"
+    dont_ask_sudo_pass
     add_apt_repos "$1"
     install_apt_apps
     install_non-apt_apps "$1"
@@ -318,3 +326,4 @@ main() {
 }
 
 main "$@"
+
