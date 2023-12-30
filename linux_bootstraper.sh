@@ -52,13 +52,21 @@ add_apt_repos() {
         sudo sh -c 'echo "deb [arch=amd64,arm64,armhf signed-by=/etc/apt/keyrings/packages.microsoft.gpg] https://packages.microsoft.com/repos/code stable main" > /etc/apt/sources.list.d/vscode.list'
         rm -f packages.microsoft.gpg
     fi
+    
+    # Github CLI
+    if [[ -z "$(apt list --installed 2>/dev/null | grep "^gh/.*installed")" || "$1" == "--full" ]]; then
+        curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+        sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
+        echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+    fi
 }
+
 
 ########## Install APT Packages ##########
 install_apt_apps() {
     apt_apps=(vim-gtk3 tree git zsh bash-completion flameshot tilix jq yq \
               wget gpg curl gnupg software-properties-common terraform apt-transport-https \
-              code xdotool chrome-gnome-shell gnome-browser-connector xclip)
+              code xdotool chrome-gnome-shell gnome-browser-connector xclip gh)
     echo "### APT Packages ###"
     sudo apt update -y > /dev/null 2>&1
     sudo apt install -y "${apt_apps[@]}" > /dev/null 2>&1
