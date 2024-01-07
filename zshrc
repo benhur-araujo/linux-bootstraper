@@ -70,7 +70,7 @@ ZSH_THEME="robbyrussell"
 # Custom plugins may be added to $ZSH_CUSTOM/plugins/
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
-plugins=(git asdf zsh-autosuggestions zsh-syntax-highlighting)
+plugins=(git asdf zsh-autosuggestions zsh-syntax-highlighting kubectl-autocomplete)
 
 source $ZSH/oh-my-zsh.sh
 
@@ -122,3 +122,16 @@ PROMPT+="$(prompt_end) "
 
 # aws-cli autocomplete
 complete -C '/usr/local/bin/aws_completer' aws
+
+# Alises - AWS
+
+# Alises - Tools and shortcuts
+alias k="$(which kubectl)"
+alias p_projects="cd ~/cloud/studies/projects/"
+alias t_projects="cd ~/cloud/jobs/trimble/projects/"
+export p_projects=~/cloud/studies/projects/
+export t_projects=~/cloud/jobs/trimble/projects/
+
+# Terragrunt autocomplete
+autoload -U +X bashcompinit && bashcompinit
+complete -o nospace -C /usr/local/bin/terragrunt terragrunt

@@ -66,7 +66,7 @@ add_apt_repos() {
 install_apt_apps() {
     apt_apps=(vim-gtk3 tree git zsh bash-completion flameshot tilix jq yq \
               wget gpg curl gnupg software-properties-common terraform apt-transport-https \
-              code xdotool chrome-gnome-shell gnome-browser-connector xclip gh)
+              code xdotool chrome-gnome-shell gnome-browser-connector xclip gh shellcheck)
     echo "### APT Packages ###"
     sudo apt update -y > /dev/null 2>&1
     sudo apt install -y "${apt_apps[@]}" > /dev/null 2>&1
@@ -183,6 +183,15 @@ install_non-apt_apps() {
     else
         echo "az-cli already installed"
     fi
+
+    # Terragrunt
+    if [[ ! -f /usr/local/bin/terragrunt || "$1" == "--full" ]]; then
+        terragrunt_latest_version="$(git ls-remote --tags --sort=v:refname https://github.com/gruntwork-io/terragrunt.git | awk -F"/" '{print $3}'| tail -1)"
+        curl -sL -o /usr/local/bin/terragrunt https://github.com/gruntwork-io/terragrunt/releases/download/$terragrunt_latest_version/terragrunt_linux_amd64
+        echo "terragrunt installed"
+    else
+        echo "terragrunt already installed"
+    fi    
 }
 
 ########## Configure Applications ###########
@@ -194,7 +203,7 @@ config_apps() {
 
     # Tilix appearance
     tilix_profile="($dconf list /com/gexperts/Tilix/profiles/ | head -1 | tr -d /)"
-    dconf write /com/gexperts/Tilix/profiles/"$tilix_profile"/background-transparency-percent "6"
+    dconf write /com/gexperts/Tilix/profiles/"$tilix_profile"/background-transparency-percent "20"
     dconf write /com/gexperts/Tilix/profiles/"$tilix_profile"/default-size-columns "120"
     dconf write /com/gexperts/Tilix/profiles/"$tilix_profile"/default-size-rows "35"
 
@@ -208,21 +217,29 @@ config_apps() {
     dconf write /com/gexperts/Tilix/keybindings/win-switch-to-previous-session "'<Ctrl><Shift>Tab'"
     dconf write /com/gexperts/Tilix/keybindings/win-switch-to-next-session "'<Ctrl>Tab'"
     dconf write /com/gexperts/Tilix/keybindings/terminal-close "'<Ctrl><Shift>w'"
+    dconf write /com/gexperts/Tilix/keybindings/terminal-page-down "'Page_Down'"
+    dconf write /com/gexperts/Tilix/keybindings/terminal-page-up "'Page_Up'"
+    dconf write /com/gexperts/Tilix/keybindings/terminal-zoom-out "'<Ctrl>underscore'"
     echo "Tilix Configured"
 
     # vim
     cat "$bootstrap_dir"/vimrc > ~/.vimrc
-    echo "Vim configured"
+	if [ ! -d ~/.vim/pack/plugins/start/vim-terraform ]; then
+		git clone https://github.com/hashivim/vim-terraform.git ~/.vim/pack/plugins/start/vim-terraform
+		echo "vim-terraform installed"
+    elif [[ -d ~/.vim/pack/plugins/start/vim-terraform && "$1" == "--full" ]]; then
+		rm -rf ~/.vim/pack/plugins/start/vim-terraform
+		git clone https://github.com/hashivim/vim-terraform.git ~/.vim/pack/plugins/start/vim-terraform
+		echo "vim-terraform updated"
+	else
+		echo "vim-terraform already installed"
+	fi
+	echo "Vim configured"
 
     # ZSH
     if [ ! -d ~/.oh-my-zsh/custom/plugins/zsh-autosuggestions ]; then
         git clone -q https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions
         echo "zsh-autosuggestions Installed"
-    #    if [ -z $(grep "plugins=(.*zsh-autosuggestions.*)" ~/.zshrc) ]; then
-    #        plugins="$(grep "^plugins=(.*.)" ~/.zshrc | sed 's/)$//')"
-    #        plugins="$plugins zsh-autosuggestions)"
-    #        sed -i "s/^plugins=.*/$plugins/" ~/.zshrc
-    #    fi
     elif [[ -d ~/.oh-my-zsh/plugins/zsh-autosuggestions && "$1" == "--full" ]]; then
         rm -rf ~/.oh-my-zsh/plugins/zsh-autosuggestions
         git clone -q https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting
@@ -230,15 +247,10 @@ config_apps() {
     else
         echo "zsh-autosuggestions already installed"
     fi
-    #
-    if [ ! -d ~/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting ]; then
+    
+	if [ ! -d ~/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting ]; then
         git clone -q https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting
         echo "zsh-syntax-highlighting Installed"
-    #     if [ -z $(grep "plugins=(.*zsh-syntax-highlighting.*)" ~/.zshrc) ]; then
-    #            plugins="$(grep "^plugins=(.*.)" ~/.zshrc | sed 's/)$//')"
-    #            plugins="$plugins zsh-syntax-highlighting)"
-    #            sed -i "s/^plugins=.*/$plugins/" ~/.zshrc
-    #     fi
     elif [[ -d ~/.oh-my-zsh/plugins/zsh-syntax-highlighting && "$1" == "--full" ]]; then
         rm -rf ~/.oh-my-zsh/plugins/zsh-syntax-highlighting
         git clone -q https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting
@@ -246,8 +258,27 @@ config_apps() {
     else
         echo "zsh-syntax-highlighting already installed"
     fi   
+	
+    if [ ! -d ~/.oh-my-zsh/custom/plugins/kubectl-autocomplete ]; then
+        mkdir -p ~/.oh-my-zsh/custom/plugins/kubectl-autocomplete
+        kubectl completion zsh > ~/.oh-my-zsh/custom/plugins/kubectl-autocomplete/kubectl-autocomplete.plugin.zsh
+        echo "kubectl-autocomplete installed"
+    elif [[ -d ~/.oh-my-zsh/custom/plugins/kubectl-autocomplete && "$1" == "--full" ]]; then
+        rm -rf ~/.oh-my-zsh/custom/plugins/kubectl-autocomplete
+        mkdir -p ~/.oh-my-zsh/custom/plugins/kubectl-autocomplete
+        kubectl completion zsh > ~/.oh-my-zsh/custom/plugins/kubectl-autocomplete/kubectl-autocomplete.plugin.zsh
+        echo "kubectl-autocomplete Updated"
+    else
+        echo "kubectl-autocomplete already installed"
+    fi   
+    
     cat "$bootstrap_dir"/zshrc > ~/.zshrc
     echo "Zsh configured"
+
+	# vscode Extentions
+	code --install-extension timonwong.shellcheck
+	code --install-extension hashicorp.terraform
+		
 }
 
 
