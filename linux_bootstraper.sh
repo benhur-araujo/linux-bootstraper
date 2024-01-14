@@ -12,8 +12,6 @@ usage() {
     exit 1
 }
 
-bootstrap_dir=~/cloud/studies/projects/shell-scripts/linux-bootstraper
-
 # Get script option from the user
 get_opt() {
     if [ "$#" -eq 1 ]; then
@@ -30,11 +28,13 @@ get_opt() {
     fi
 }
 
-########## Add APT Repositories ###########
+########## General System Preferences ###############
 dont_ask_sudo_pass() {
     echo "%$USER ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/"$USER" > /dev/null
+    echo "$USER added to sudoers file"
 }
 
+########## Add APT Repositories ###########
 add_apt_repos() {
     # Terraform
     if [[ -z "$(apt list --installed 2>/dev/null | grep 'terraform.*installed')" || "$1" == "--full" ]]; then
@@ -223,7 +223,7 @@ config_apps() {
     echo "Tilix Configured"
 
     # vim
-    cat "$bootstrap_dir"/vimrc > ~/.vimrc
+    cat "$PWD"/vimrc > ~/.vimrc
 	if [ ! -d ~/.vim/pack/plugins/start/vim-terraform ]; then
 		git clone https://github.com/hashivim/vim-terraform.git ~/.vim/pack/plugins/start/vim-terraform
 		echo "vim-terraform installed"
@@ -272,7 +272,7 @@ config_apps() {
         echo "kubectl-autocomplete already installed"
     fi   
     
-    cat "$bootstrap_dir"/zshrc > ~/.zshrc
+    cat "$PWD"/zshrc > ~/.zshrc
     echo "Zsh configured"
 
 	# vscode Extentions
@@ -316,7 +316,7 @@ gnome_settings() {
     gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom2/ command 'bash -c "amixer set Capture toggle"'
     gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom2/ binding '<Ctrl><Alt>m'
     gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom3/ name 'Put Focus Next Monitor'
-    gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom3/ command "bash $bootstrap_dir/swap-screens.sh"
+    gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom3/ command "bash $PWD/swap-screens.sh"
     gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom3/ binding '<Super>Tab'
     gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom4/ name 'Sound Settings'
     gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom4/ command 'gnome-control-center sound'
