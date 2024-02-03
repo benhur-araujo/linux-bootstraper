@@ -36,3 +36,7 @@ set shiftwidth=4
 set tabstop=4
 " Copy text to clipboard
 set clipboard=unnamedplus
+" Ctrl + > move to next word
+noremap <C-Right> w
+" Ctrl + < move to previous word
+noremap <C-Left> b 

@@ -37,6 +37,7 @@ xdotool, chrome-gnome-shell, gnome-browser-connector, xclip: Additional utilitie
 - Discord: Communication platform
 - AWS CLI: Amazon Web Services command-line tool
 - AZURE CLI: Microsoft Azure command-line tool
+- Kubelogin - A Kubernetes credential (exec) plugin implementing azure authentication
 - Terragrunt: Wrapper for Terraform
 
 ### Packages Configurations

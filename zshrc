@@ -123,14 +123,17 @@ PROMPT+="$(prompt_end) "
 # aws-cli autocomplete
 complete -C '/usr/local/bin/aws_completer' aws
 
+# az-cli autocomplete
+source /etc/bash_completion.d/azure-cli
+
 # Alises - AWS
 
 # Alises - Tools and shortcuts
 alias k="$(which kubectl)"
 alias p_projects="cd ~/cloud/studies/projects/"
+alias conquer_project="cd ~/cloud/studies/projects/conquer-project"
 alias t_projects="cd ~/cloud/jobs/trimble/projects/"
-export p_projects=~/cloud/studies/projects/
-export t_projects=~/cloud/jobs/trimble/projects/
+alias ttm-platform-telematics="cd ~/cloud/jobs/trimble/projects/ttm-platform-telematics"
 
 # Terragrunt autocomplete
 autoload -U +X bashcompinit && bashcompinit

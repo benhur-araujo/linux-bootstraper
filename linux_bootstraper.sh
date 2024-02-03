@@ -179,9 +179,16 @@ install_non-apt_apps() {
     # AZURE-CLI
     if [[ -z "$(dpkg -l | grep azure-cli)" || "$1" == "--full" ]]; then
         curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash > /dev/null
-        echo "az-cli Installed"
+        az aks install-cli
+        echo "az-cli Installed and kubelogin installed"
     else
         echo "az-cli already installed"
+        if [[ ! $(which kubelogin)  ]]; then
+            az aks install-cli
+            echo "kubelogin installed"
+        else
+            echo "kubelogin already installed"
+        fi
     fi
 
     # Terragrunt
@@ -202,7 +209,7 @@ config_apps() {
     sudo update-alternatives --set x-terminal-emulator /usr/bin/tilix
 
     # Tilix appearance
-    tilix_profile="($dconf list /com/gexperts/Tilix/profiles/ | head -1 | tr -d /)"
+    tilix_profile="default"
     dconf write /com/gexperts/Tilix/profiles/"$tilix_profile"/background-transparency-percent "20"
     dconf write /com/gexperts/Tilix/profiles/"$tilix_profile"/default-size-columns "120"
     dconf write /com/gexperts/Tilix/profiles/"$tilix_profile"/default-size-rows "35"
