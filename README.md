@@ -18,14 +18,14 @@ cd linux-bootstraper
 - GitHub CLI: GitHub CLI APT repository
 
 #### APT Packages Installations
-vim-gtk3, tree, git: Essential tools
-zsh, bash-completion: Shell enhancements
-flameshot: Screenshot tool
-tilix: Terminal emulator
-jq, yq, wget, gpg, curl, gnupg, software-properties-common, code, gh, shellcheck, terraform: Development tools
-apt-transport-https: APT package for secure package handling
-xdotool, chrome-gnome-shell, gnome-browser-connector, xclip: Additional utilities
-
+- vim-gtk3, tree, git: Essential tools
+- zsh, bash-completion: Shell enhancements
+- flameshot: Screenshot tool
+- tilix: Terminal emulator
+- jq, yq, wget, gpg, curl, gnupg, software-properties-common, code, gh, shellcheck: Dev Tools
+- Ansible, Terraform: IaC Tools
+- apt-transport-https: APT package for secure package handling
+- xdotool, chrome-gnome-shell, gnome-browser-connector, xclip 
 
 ### Non-Package Managed Installations
 - Google Chrome: Web browser
@@ -39,6 +39,7 @@ xdotool, chrome-gnome-shell, gnome-browser-connector, xclip: Additional utilitie
 - AZURE CLI: Microsoft Azure command-line tool
 - Kubelogin - A Kubernetes credential (exec) plugin implementing azure authentication
 - Terragrunt: Wrapper for Terraform
+- MiniKube
 
 ### Packages Configurations
 - Tilix: Changed many shortcuts and terminal behavior

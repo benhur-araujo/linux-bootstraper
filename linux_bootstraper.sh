@@ -66,7 +66,7 @@ add_apt_repos() {
 install_apt_apps() {
     apt_apps=(vim-gtk3 tree git zsh bash-completion flameshot tilix jq yq \
               wget gpg curl gnupg software-properties-common terraform apt-transport-https \
-              code xdotool chrome-gnome-shell gnome-browser-connector xclip gh shellcheck)
+              code xdotool chrome-gnome-shell gnome-browser-connector xclip gh shellcheck ansible)
     echo "### APT Packages ###"
     sudo apt update -y > /dev/null 2>&1
     sudo apt install -y "${apt_apps[@]}" > /dev/null 2>&1
@@ -282,12 +282,22 @@ config_apps() {
     cat "$PWD"/zshrc > ~/.zshrc
     echo "Zsh configured"
 
-	# vscode Extentions
-	code --install-extension timonwong.shellcheck
-	code --install-extension hashicorp.terraform
-		
-}
+    # MiniKube
+    if [[ ! "$(which minikube)" || "$1" == "--full" ]]; then
+        curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+        sudo install minikube-linux-amd64 /usr/local/bin/minikube
+    else
+        echo "Minikube already installed"
+    fi
 
+    # Helm
+    if [[ ! "$(which helm)" || "$1" == "--full" ]]; then
+        curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+        helm completion zsh > "${fpath[1]}/_helm"
+    else
+        echo "helm already installed"
+    fi
+}
 
 ########## Gnome Settings ##########
 gnome_settings() {
