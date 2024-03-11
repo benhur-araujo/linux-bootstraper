@@ -343,7 +343,10 @@ gnome_settings() {
     gsettings set org.gnome.settings-daemon.plugins.media-keys home "['<Super>e']"
     gsettings set org.gnome.desktop.wm.keybindings switch-applications "[]"   
     gsettings set org.gnome.shell.keybindings show-screenshot-ui "[]"
-    
+
+    # Disable Desktop Icons NG (DING) extension
+    gnome-extensions disable ding@rastersoft.com    
+
     echo "Gnome preferences applied"
 }
 
