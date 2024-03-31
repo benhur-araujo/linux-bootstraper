@@ -70,7 +70,7 @@ install_apt_apps() {
     echo "### APT Packages ###"
     sudo apt update -y > /dev/null 2>&1
     sudo apt install -y "${apt_apps[@]}" > /dev/null 2>&1
-    echo "Installed Packages: ${apt_apps[@]}"    
+    echo "Installed Packages: ${apt_apps[@]}"
 }
 
 ########## Non-package manager Installations ##########
@@ -108,11 +108,6 @@ install_non-apt_apps() {
         git clone -q https://github.com/asdf-vm/asdf.git ~/.asdf --branch "$asdf_latest_version" > /dev/null 2>&1
         echo "asdf Installed"
         
-        #if [ -z "$(grep "plugins=(.*asdf.*)" ~/.zshrc)" ]; then
-        #        plugins="$(grep "^plugins=(.*.)" ~/.zshrc | sed 's/)$//')"
-        #        plugins="$plugins asdf)"
-        #        sed -i "s/^plugins=.*/$plugins/" ~/.zshrc
-        #fi
     else
         echo "asdf already installed"
 
@@ -179,7 +174,7 @@ install_non-apt_apps() {
     # AZURE-CLI
     if [[ -z "$(dpkg -l | grep azure-cli)" || "$1" == "--full" ]]; then
         curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash > /dev/null
-        az aks install-cli
+        sudo az aks install-cli > /dev/null 2>&1
         echo "az-cli Installed and kubelogin installed"
     else
         echo "az-cli already installed"
@@ -199,6 +194,17 @@ install_non-apt_apps() {
     else
         echo "terragrunt already installed"
     fi    
+
+    # Terraform-docs
+    if [[ ! -f /usr/local/bin/terraform-docs || "$1" == "--full" ]]; then
+        curl -sLo /tmp/terraform-docs.tar.gz https://github.com/terraform-docs/terraform-docs/releases/download/v0.17.0/terraform-docs-v0.17.0-$(uname)-amd64.tar.gz
+        tar -xzf /tmp/terraform-docs.tar.gz -C /tmp
+        chmod +x /tmp/terraform-docs
+        sudo mv /tmp/terraform-docs /usr/local/bin/terraform-docs
+        echo "Terraform-docs installed"
+    else
+        echo "terraform-docs already installed"
+    fi
 }
 
 ########## Configure Applications ###########
@@ -351,27 +357,26 @@ gnome_settings() {
 }
 
 gnome_extensions() {
-    # Credits: https://unix.stackexchange.com/questions/617288/command-line-tool-to-install-gnome-shell-extensions
     echo -e "\n### Gnome Extensions ###"
-    local extensions=(https://extensions.gnome.org/extension/4839/clipboard-history/
-                      https://extensions.gnome.org/extension/1386/notification-counter)
 
-    for extension in "${extensions[@]}"; do
-        EXTENSION_ID=$(curl -sL $extension | grep -oP 'data-uuid="\K[^"]+')
-        VERSION_TAG=$(curl -Lfs "https://extensions.gnome.org/extension-query/?search=$EXTENSION_ID" | jq '.extensions[0] | .shell_version_map | map(.pk) | max')
-        if ! gnome-extensions list | grep --quiet ${EXTENSION_ID}; then
-            busctl --user call org.gnome.Shell.Extensions /org/gnome/Shell/Extensions org.gnome.Shell.Extensions InstallRemoteExtension s ${EXTENSION_ID} > /dev/null
-            wget -qO ${EXTENSION_ID}.zip "https://extensions.gnome.org/download-extension/${EXTENSION_ID}.shell-extension.zip?version_tag=$VERSION_TAG"
-            gnome-extensions install --force ${EXTENSION_ID}.zip > /dev/null
-            gnome-extensions enable ${EXTENSION_ID}
-            rm ${EXTENSION_ID}.zip
-            echo "$extension Installed"
-        
-        else
-            echo "$extension already installed"
-        fi
+    local install_extensions=(
+        "https://extensions.gnome.org/extension-data/clipboard-historyalexsaveau.dev.v40.shell-extension.zip"
+        "https://extensions.gnome.org/extension-data/NotificationCountercoolllsk.v8.shell-extension.zip"
+    )
+
+    for extension in "${install_extensions[@]}"; do
+        wget -qO "extension.zip" "$extension" 
+        gnome-extensions install --force "extension.zip" > /dev/null
+        rm "extension.zip"
+    done
+
+    local user_extensions=($(gnome-extensions list --user))
+    for extension in "${user_extensions[@]}"; do
+        gnome-extensions enable "$extension"
+        echo "$extension installed"
     done
 }
+
 
 main() {
     get_opt "$@"
@@ -382,6 +387,7 @@ main() {
     config_apps
     gnome_settings
     gnome_extensions
+    echo -e "\n##### Finished! ######"
 }
 
 main "$@"
