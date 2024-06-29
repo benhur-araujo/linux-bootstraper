@@ -25,7 +25,7 @@ cd linux-bootstraper
 - jq, yq, wget, gpg, curl, gnupg, software-properties-common, code, gh, shellcheck: Dev Tools
 - Ansible, Terraform: IaC Tools
 - apt-transport-https: APT package for secure package handling
-- xdotool, chrome-gnome-shell, gnome-browser-connector, xclip 
+- xdotool, chrome-gnome-shell, gnome-browser-connector, xclip, bat, zoxide
 
 ### Non-Package Managed Installations
 - Google Chrome: Web browser

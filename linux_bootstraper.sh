@@ -7,14 +7,16 @@ set -eo pipefail
 
 # Display how to use this script
 usage() {
-    echo "Usage: $0 --full  # Install or update everything"
-    echo "usage: $0 --diff  # Install not installed packages" 
+    echo "usage: $0 [--diff]  # Default. Install not installed packages"
+    echo "Usage: $0 [--full] # Install or update everything"
     exit 1
 }
 
 # Get script option from the user
 get_opt() {
-    if [ "$#" -eq 1 ]; then
+    if [ -z "$1" ]; then
+        user_opt="--diff"
+    elif [ "$#" -eq 1 ]; then
         case $1 in
             --full)
                 user_opt="--full";;
@@ -66,7 +68,7 @@ add_apt_repos() {
 install_apt_apps() {
     apt_apps=(vim-gtk3 tree git zsh bash-completion flameshot tilix jq yq \
               wget gpg curl gnupg software-properties-common terraform apt-transport-https \
-              code xdotool chrome-gnome-shell gnome-browser-connector xclip gh shellcheck ansible)
+              code xdotool chrome-gnome-shell gnome-browser-connector xclip gh shellcheck ansible bat zoxide)
     echo "### APT Packages ###"
     sudo apt update -y > /dev/null 2>&1
     sudo apt install -y "${apt_apps[@]}" > /dev/null 2>&1
@@ -292,6 +294,7 @@ config_apps() {
     if [[ ! "$(which minikube)" || "$1" == "--full" ]]; then
         curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
         sudo install minikube-linux-amd64 /usr/local/bin/minikube
+        rm minikube-linux-amd64
     else
         echo "Minikube already installed"
     fi
@@ -299,7 +302,7 @@ config_apps() {
     # Helm
     if [[ ! "$(which helm)" || "$1" == "--full" ]]; then
         curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
-        helm completion zsh > "${fpath[1]}/_helm"
+        helm completion zsh | sudo tee "${fpath[1]}/_helm" > /dev/null
     else
         echo "helm already installed"
     fi
@@ -379,16 +382,17 @@ gnome_extensions() {
 
 
 main() {
-    get_opt "$@"
+    param="${1:---diff}"
+    
+    get_opt "$param"
     dont_ask_sudo_pass
-    add_apt_repos "$1"
+    add_apt_repos "$param"
     install_apt_apps
-    install_non-apt_apps "$1"
-    config_apps
+    install_non-apt_apps "$param"
+    config_apps "$param"
     gnome_settings
     gnome_extensions
     echo -e "\n##### Finished! ######"
 }
 
-main "$@"
-
+main "$1"
