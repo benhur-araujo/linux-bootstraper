@@ -47,6 +47,9 @@ complete -o nospace -C /usr/local/bin/terragrunt terragrunt
 
 # k8s
 alias k="$(which kubectl)"
+alias kcs="$(which kubectl) config set-context --current --namespace "
+alias kcu="$(which kubectl) config use-context "
+alias kcg="$(which kubectl) config get-contexts"
 
 # directories
 alias pp="cd ~/cloud/studies/projects/"
