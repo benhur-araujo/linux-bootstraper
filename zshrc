@@ -1,5 +1,8 @@
 ################# TERMINAL CONFIGS #######################
 
+# Enable word splitting to match bash behavior
+setopt SH_WORD_SPLIT
+
 # Path to your oh-my-zsh installation.
 export ZSH="$HOME/.oh-my-zsh"
 
@@ -46,10 +49,18 @@ complete -o nospace -C /usr/local/bin/terragrunt terragrunt
 ################# ALIASES ######################
 
 # k8s
+alias kc="$(which kubectl) create"
 alias k="$(which kubectl)"
-alias kcs="$(which kubectl) config set-context --current --namespace "
-alias kcu="$(which kubectl) config use-context "
-alias kcg="$(which kubectl) config get-contexts"
+alias kccc="$(which kubectl) config current-context"
+alias ka="$(which kubectl apply -f  )"
+alias kcsx="$(which kubectl) config set-context --current --namespace "
+alias kcux="$(which kubectl) config use-context "
+alias kcgx="$(which kubectl) config get-contexts"
+alias kg="$(which kubectl) get"
+alias kd="$(which kubectl describe)"
+export dry="--dry-run=client -o yaml"
+export now="--force --grace-period 0"
+
 
 # directories
 alias pp="cd ~/cloud/studies/projects/"
