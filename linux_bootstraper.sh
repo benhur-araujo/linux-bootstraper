@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Since I have 2 computers running Ubuntu 23.10 and I'm having a hard time keeping their configs synced, \
+# Since I have 2 computers running Ubuntu 24.04 and I'm having a hard time keeping their configs synced, \
 # I created this script to do that for me.
 
 set -eo pipefail
@@ -117,7 +117,7 @@ install_non-apt_apps() {
 
     # mega
     if [[ -z "$(apt list --installed 2>/dev/null | grep 'mega.*installed')" || "$1" == "--full" ]]; then
-        curl -sL -o /tmp/mega.deb https://mega.nz/linux/repo/xUbuntu_23.10/amd64/megasync-xUbuntu_23.10_amd64.deb
+        curl -sL -o /tmp/mega.deb https://mega.nz/linux/repo/xUbuntu_24.04/amd64/megasync-xUbuntu_24.04_amd64.deb
         sudo apt install /tmp/mega.deb > /dev/null 2>&1
         echo "Mega Installed"
     else
@@ -191,7 +191,7 @@ install_non-apt_apps() {
     # Terragrunt
     if [[ ! -f /usr/local/bin/terragrunt || "$1" == "--full" ]]; then
         terragrunt_latest_version="$(git ls-remote --tags --sort=v:refname https://github.com/gruntwork-io/terragrunt.git | awk -F"/" '{print $3}'| tail -1)"
-        curl -sL -o /usr/local/bin/terragrunt https://github.com/gruntwork-io/terragrunt/releases/download/$terragrunt_latest_version/terragrunt_linux_amd64
+        sudo curl -sL -o /usr/local/bin/terragrunt https://github.com/gruntwork-io/terragrunt/releases/download/$terragrunt_latest_version/terragrunt_linux_amd64
         echo "terragrunt installed"
     else
         echo "terragrunt already installed"
@@ -363,7 +363,7 @@ gnome_extensions() {
     echo -e "\n### Gnome Extensions ###"
 
     local install_extensions=(
-        "https://extensions.gnome.org/extension-data/clipboard-historyalexsaveau.dev.v40.shell-extension.zip"
+        "https://extensions.gnome.org/extension-data/clipboard-historyalexsaveau.dev.v45.shell-extension.zip"
         "https://extensions.gnome.org/extension-data/NotificationCountercoolllsk.v8.shell-extension.zip"
     )
 
