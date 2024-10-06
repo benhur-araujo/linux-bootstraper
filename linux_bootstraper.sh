@@ -31,9 +31,13 @@ get_opt() {
 }
 
 ########## General System Preferences ###############
-dont_ask_sudo_pass() {
+general_configs() {
+    # Add current user to sudoers file
     echo "%$USER ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/"$USER" > /dev/null
     echo "$USER added to sudoers file"
+
+    # Laptop Lid behavior - Ignore when closing it
+    sudo sed -i "s/^#HandleLidSwitch=suspend$/HandleLidSwitch=ignore/" /etc/systemd/logind.conf
 }
 
 ########## Add APT Repositories ###########
@@ -385,7 +389,7 @@ main() {
     param="${1:---diff}"
     
     get_opt "$param"
-    dont_ask_sudo_pass
+    general_configs
     add_apt_repos "$param"
     install_apt_apps
     install_non-apt_apps "$param"
