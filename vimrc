@@ -40,3 +40,5 @@ set clipboard=unnamedplus
 noremap <C-Right> w
 " Ctrl + < move to previous word
 noremap <C-Left> b 
+" turn relative line numbers on
+:set relativenumber
