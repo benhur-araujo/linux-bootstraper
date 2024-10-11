@@ -213,6 +213,17 @@ install_non-apt_apps() {
     fi
 }
 
+    # K9S
+    if [[ ! -f /usr/bin/k9s || "$1" == "--full" ]]; then
+        k9s_latest_version="$(git ls-remote --tags --sort=v:refname https://github.com/derailed/k9s.git | awk -F"/" '{print $3}'| tail -1 | sed 's/\^{}//')"
+        wget https://github.com/derailed/k9s/releases/download/"$k9s_latest_version"/k9s_linux_amd64.deb
+        sudo apt install ./k9s_linux_amd64.deb
+        rm k9s_linux_amd64.deb
+    else
+        echo "K9S already installed"
+    fi
+
+
 ########## Configure Applications ###########
 config_apps() {
     echo -e "\n### Apply Apps configs ###"
@@ -225,6 +236,8 @@ config_apps() {
     dconf write /com/gexperts/Tilix/profiles/"$tilix_profile"/background-transparency-percent "20"
     dconf write /com/gexperts/Tilix/profiles/"$tilix_profile"/default-size-columns "120"
     dconf write /com/gexperts/Tilix/profiles/"$tilix_profile"/default-size-rows "35"
+    dconf write /com/gexperts/Tilix/profiles/"$tilix_profile"/font "'Monospace 11'"
+
 
     # Tilix shortcuts
     dconf write /com/gexperts/Tilix/keybindings/session-close "'<Ctrl><Alt>w'"
