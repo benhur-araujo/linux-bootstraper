@@ -1,5 +1,8 @@
 ################# TERMINAL CONFIGS #######################
 
+# Set default text editor
+export EDITOR=vim
+
 # Enable word splitting to match bash behavior
 setopt SH_WORD_SPLIT
 
