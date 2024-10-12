@@ -18,7 +18,7 @@ source $ZSH/oh-my-zsh.sh
 # oh-my-zsh robbyrussel theme overrides
 ZSH_THEME="robbyrussell"
 
-PROMPT="%{$fg_bold[cyan]%}%T%{$fg_bold[green]%} %{$fg_bold[green]%}%3d%{$fg_bold[yellow]%}% %{$reset_color%}"
+PROMPT="%{$fg_bold[cyan]%}%T%{$fg_bold[green]%} %{$fg_bold[green]%}%7d%{$fg_bold[yellow]%}% %{$reset_color%}"
 PROMPT+=' $(git_prompt_info)'
 prompt_end() {    
   if [[ -n $CURRENT_BG ]]; then
