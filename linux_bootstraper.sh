@@ -211,8 +211,7 @@ install_non-apt_apps() {
     else
         echo "terraform-docs already installed"
     fi
-}
-
+    
     # K9S
     if [[ ! -f /usr/bin/k9s || "$1" == "--full" ]]; then
         k9s_latest_version="$(git ls-remote --tags --sort=v:refname https://github.com/derailed/k9s.git | awk -F"/" '{print $3}'| tail -1 | sed 's/\^{}//')"
@@ -222,6 +221,8 @@ install_non-apt_apps() {
     else
         echo "K9S already installed"
     fi
+}
+
 
 
 ########## Configure Applications ###########
