@@ -11,6 +11,8 @@ cd linux-bootstraper
 ### Features
 #### General system preferences
 - Add current $USER to sudoers file
+- Laptop lid behavior - Ignore when closing it
+- Set VIM as default text editor
 
 #### Add APT Repositories
 - Terraform: HashiCorp Terraform APT repository
@@ -26,6 +28,7 @@ cd linux-bootstraper
 - Ansible, Terraform: IaC Tools
 - apt-transport-https: APT package for secure package handling
 - xdotool, chrome-gnome-shell, gnome-browser-connector, xclip, bat, zoxide
+- python3-pip, pre-commit, lastpass-cli
 
 ### Non-Package Managed Installations
 - Google Chrome: Web browser
@@ -39,7 +42,7 @@ cd linux-bootstraper
 - AZURE CLI: Microsoft Azure command-line tool
 - Kubelogin - A Kubernetes credential (exec) plugin implementing azure authentication
 - Terragrunt: Wrapper for Terraform
-- MiniKube
+- Minikube, K9S, helm
 
 ### Packages Configurations
 - Tilix: Changed many shortcuts and terminal behavior
@@ -60,5 +63,5 @@ cd linux-bootstraper
 - Notification Counter
 
 ### Notes
-- This script assumes Ubuntu 23.10 as the operating system.
+- This script assumes Ubuntu 24.04 as the operating system.
 - Make sure to review and customize the script based on your requirements.

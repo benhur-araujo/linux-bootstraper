@@ -215,8 +215,8 @@ install_non-apt_apps() {
     # K9S
     if [[ ! -f /usr/bin/k9s || "$1" == "--full" ]]; then
         k9s_latest_version="$(git ls-remote --tags --sort=v:refname https://github.com/derailed/k9s.git | awk -F"/" '{print $3}'| tail -1 | sed 's/\^{}//')"
-        wget https://github.com/derailed/k9s/releases/download/"$k9s_latest_version"/k9s_linux_amd64.deb
-        sudo apt install ./k9s_linux_amd64.deb
+        wget -q https://github.com/derailed/k9s/releases/download/"$k9s_latest_version"/k9s_linux_amd64.deb
+        sudo apt install ./k9s_linux_amd64.deb > /dev/null 2>&1
         rm k9s_linux_amd64.deb
     else
         echo "K9S already installed"
