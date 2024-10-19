@@ -265,8 +265,7 @@ compdef _helm helm
 
 
 ################# ALIASES ######################
-
-# k8s
+# Kubernetes
 alias kc="$(which kubectl) create"
 alias k="$(which kubectl)"
 alias kcc="$(which kubectl) config current-context"
@@ -280,17 +279,20 @@ alias kd="$(which kubectl) describe"
 export dry="--dry-run=client -o yaml"
 export now="--force --grace-period 0"
 
-
-# directories
+# Directories
 alias pp="cd ~/cloud/studies/projects/"
 alias ppc="cd ~/cloud/studies/projects/conquerproject"
 alias tp="cd ~/cloud/jobs/trimble/projects/"
 alias mc="cd ~/cloud/jobs/trimble/projects/ttm-platform-telematics"
 alias mcg="cd ~/cloud/jobs/trimble/projects/ttm-platform-telematics/ttm-platform-gitops"
 
-# general tools
+# General tools
 alias cat="batcat -f"
 alias less="batcat -f --paging=always"
 eval "$(zoxide init zsh)"
 alias cd="z"
 alias xclip="xclip -sel clip"
+
+# Scripts
+alias ct="bash ~/cloud/studies/projects/bash-scripts/connection-tester/connection-tester.sh"
+alias sup="bash ~/cloud/studies/projects/bash-scripts/system-updater/system_updater.sh -s"
