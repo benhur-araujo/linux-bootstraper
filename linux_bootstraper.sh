@@ -72,7 +72,7 @@ add_apt_repos() {
 install_apt_apps() {
     apt_apps=(vim-gtk3 tree git zsh bash-completion flameshot tilix jq yq \
               wget gpg curl gnupg software-properties-common terraform apt-transport-https \
-              code xdotool chrome-gnome-shell gnome-browser-connector xclip gh shellcheck ansible bat zoxide lastpass-cli python3-pip pre-commit)
+              code xdotool chrome-gnome-shell gnome-browser-connector xclip gh shellcheck ansible bat zoxide lastpass-cli python3-pip pre-commit openconnect nmap)
     echo "### APT Packages ###"
     sudo apt update -y > /dev/null 2>&1
     sudo apt install -y "${apt_apps[@]}" > /dev/null 2>&1
@@ -220,6 +220,16 @@ install_non-apt_apps() {
         rm k9s_linux_amd64.deb
     else
         echo "K9S already installed"
+    fi
+
+    # ArgoCD CLI
+    if [[ ! -f /usr/local/bin/argocd || "$1" == "--full" ]]; then
+        ARGOCD_VERSION=$(curl --silent "https://api.github.com/repos/argoproj/argo-cd/releases/latest" | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/')
+        curl -sSL -o /tmp/argocd-${ARGOCD_VERSION} https://github.com/argoproj/argo-cd/releases/download/${ARGOCD_VERSION}/argocd-linux-amd64
+        chmod +x /tmp/argocd-${ARGOCD_VERSION}
+        sudo mv /tmp/argocd-${ARGOCD_VERSION} /usr/local/bin/argocd
+    else
+        echo "ArgoCD CLI already installed"
     fi
 }
 
@@ -373,6 +383,9 @@ gnome_settings() {
 
     # Disable Desktop Icons NG (DING) extension
     gnome-extensions disable ding@rastersoft.com    
+
+    # Do not Dim Screen when computer is inactive
+    gsettings set org.gnome.settings-daemon.plugins.power idle-dim false
 
     echo "Gnome preferences applied"
 }
