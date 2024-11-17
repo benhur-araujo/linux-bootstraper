@@ -42,3 +42,5 @@ noremap <C-Right> w
 noremap <C-Left> b 
 " turn relative line numbers on
 :set relativenumber
+" set folding by indentation
+set foldmethod=indent
