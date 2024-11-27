@@ -296,3 +296,4 @@ alias xclip="xclip -sel clip"
 # Scripts
 alias ct="bash ~/cloud/studies/projects/bash-scripts/connection-tester/connection-tester.sh"
 alias sup="bash ~/cloud/studies/projects/bash-scripts/system-updater/system_updater.sh -s"
+alias fc="bash ~/cloud/studies/projects/bash-scripts/focus-chunker/focus-chunker.sh 40"
