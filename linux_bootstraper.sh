@@ -65,6 +65,12 @@ add_apt_repos() {
         sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
         echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
     fi
+
+    # Glow - CLI Markdown render
+    if [[ ! "$(which glow)" || "$1" == "--full" ]]; then
+        curl -fsSL https://repo.charm.sh/apt/gpg.key | sudo gpg --yes --dearmor -o /etc/apt/keyrings/charm.gpg
+        echo "deb [signed-by=/etc/apt/keyrings/charm.gpg] https://repo.charm.sh/apt/ * *" | sudo tee /etc/apt/sources.list.d/charm.list > /dev/null
+    fi 
 }
 
 
@@ -72,7 +78,7 @@ add_apt_repos() {
 install_apt_apps() {
     apt_apps=(vim-gtk3 tree git zsh bash-completion flameshot tilix jq yq \
               wget gpg curl gnupg software-properties-common terraform apt-transport-https \
-              code xdotool chrome-gnome-shell gnome-browser-connector xclip gh shellcheck ansible bat zoxide lastpass-cli python3-pip pre-commit openconnect nmap)
+              code xdotool chrome-gnome-shell gnome-browser-connector xclip gh shellcheck ansible bat zoxide lastpass-cli python3-pip pre-commit openconnect nmap glow)
     echo "### APT Packages ###"
     sudo apt update -y > /dev/null 2>&1
     sudo apt install -y "${apt_apps[@]}" > /dev/null 2>&1
