@@ -231,6 +231,23 @@ install_non-apt_apps() {
     else
         echo "ArgoCD CLI already installed"
     fi
+    
+    # MiniKube
+    if [[ ! "$(which minikube)" || "$1" == "--full" ]]; then
+        curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+        sudo install minikube-linux-amd64 /usr/local/bin/minikube
+        rm minikube-linux-amd64
+    else
+        echo "Minikube already installed"
+    fi
+
+    # Helm
+    if [[ ! "$(which helm)" || "$1" == "--full" ]]; then
+        curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+        helm completion zsh | sudo tee "${fpath[1]}/_helm" > /dev/null
+    else
+        echo "helm already installed"
+    fi
 }
 
 
@@ -318,22 +335,6 @@ config_apps() {
     cat "$PWD"/zshrc > ~/.zshrc
     echo "Zsh configured"
 
-    # MiniKube
-    if [[ ! "$(which minikube)" || "$1" == "--full" ]]; then
-        curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
-        sudo install minikube-linux-amd64 /usr/local/bin/minikube
-        rm minikube-linux-amd64
-    else
-        echo "Minikube already installed"
-    fi
-
-    # Helm
-    if [[ ! "$(which helm)" || "$1" == "--full" ]]; then
-        curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
-        helm completion zsh | sudo tee "${fpath[1]}/_helm" > /dev/null
-    else
-        echo "helm already installed"
-    fi
 }
 
 ########## Gnome Settings ##########
