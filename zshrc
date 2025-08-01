@@ -10,7 +10,7 @@ setopt SH_WORD_SPLIT
 export ZSH="$HOME/.oh-my-zsh"
 
 # Which plugins would you like to load?
-plugins=(git asdf zsh-autosuggestions zsh-syntax-highlighting kubectl-autocomplete)
+plugins=(git asdf zsh-autosuggestions zsh-syntax-highlighting kubectl-autocomplete vi-mode)
 
 # Load oh-my-zsh
 source $ZSH/oh-my-zsh.sh

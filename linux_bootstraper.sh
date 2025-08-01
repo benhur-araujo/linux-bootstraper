@@ -78,7 +78,7 @@ add_apt_repos() {
 install_apt_apps() {
     apt_apps=(vim-gtk3 tree git zsh bash-completion flameshot tilix jq yq \
               wget gpg curl gnupg software-properties-common terraform apt-transport-https \
-              code xdotool chrome-gnome-shell gnome-browser-connector xclip gh shellcheck ansible bat zoxide lastpass-cli python3-pip pre-commit openconnect nmap glow)
+              code xdotool chrome-gnome-shell gnome-browser-connector xclip gh shellcheck ansible bat zoxide python3-pip pre-commit openconnect nmap glow)
     echo "### APT Packages ###"
     sudo apt update -y > /dev/null 2>&1
     sudo apt install -y "${apt_apps[@]}" > /dev/null 2>&1
@@ -154,16 +154,6 @@ install_non-apt_apps() {
         rm -f get-docker.sh
     else
         echo "Docker already installed"
-    fi
-    
-    # Discord
-    if [[ -z "$(apt list --installed 2>/dev/null | grep "^discord.*installed")" || "$1" == "--full" ]]; then
-        wget -q "https://discord.com/api/download?platform=linux&format=deb" -O discord.deb
-        sudo apt install ./discord.deb > /dev/null 2>&1
-        echo "Discord Installed"
-        rm -f discord.deb
-    else
-        echo "Discord already installed"
     fi
 
     # AWS-CLI
