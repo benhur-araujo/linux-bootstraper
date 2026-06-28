@@ -3,7 +3,7 @@
 # Since I have 2 computers running Ubuntu 26.04 and I'm having a hard time keeping their configs synced, \
 # I created this script to do that for me.
 
-set -eo pipefail
+set -exo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname "$0")" && pwd)"
 
@@ -128,15 +128,6 @@ install_non-apt_apps() {
 
     fi
 
-    # mega
-    if [[ -z "$(apt list --installed 2>/dev/null | grep 'mega.*installed')" || "$1" == "--full" ]]; then
-        curl -sL -o /tmp/mega.deb https://mega.nz/linux/repo/xUbuntu_24.04/amd64/megasync-xUbuntu_24.04_amd64.deb
-        sudo apt install /tmp/mega.deb > /dev/null 2>&1
-        echo "Mega Installed"
-    else
-        echo "Mega already installed"
-    fi
-
     # kubectl
     if [[ ! -f /usr/local/bin/kubectl || "$1" == "--full" ]]; then
         curl -sLO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
@@ -158,27 +149,10 @@ install_non-apt_apps() {
     else
         echo "Docker already installed"
     fi
-
-    # AWS-CLI
-    if [[ ! -f /usr/local/bin/aws || "$1" == "--full" ]]; then
-        curl -sL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-        unzip awscliv2.zip > /dev/null
-        if [ -d /usr/local/aws-cli/v2/current ]; then
-            sudo ./aws/install --update > /dev/null
-            echo "AWS CLI Updated"
-        else
-            sudo ./aws/install > /dev/null
-            echo "AWS CLI Installed"
-        fi
-        rm -f awscliv2.zip
-        rm -rf ./aws
-    else
-        echo "aws-cli already installed"
-    fi
     
     # AZURE-CLI
     if [[ -z "$(dpkg -l | grep azure-cli)" || "$1" == "--full" ]]; then
-        curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash > /dev/null
+     	curl -fsSL 'https://azurecliprod.blob.core.windows.net/$root/deb_install.sh' | sudo bash   
         sudo az aks install-cli > /dev/null 2>&1
         echo "az-cli Installed and kubelogin installed"
     else
@@ -193,8 +167,7 @@ install_non-apt_apps() {
 
     # Terragrunt
     if [[ ! -f /usr/local/bin/terragrunt || "$1" == "--full" ]]; then
-        terragrunt_latest_version="$(git ls-remote --tags --sort=v:refname https://github.com/gruntwork-io/terragrunt.git | awk -F"/" '{print $3}'| tail -1)"
-        sudo curl -sL -o /usr/local/bin/terragrunt https://github.com/gruntwork-io/terragrunt/releases/download/$terragrunt_latest_version/terragrunt_linux_amd64
+        curl -sSfL --proto '=https' --tlsv1.2 https://terragrunt.com/install | bash
         echo "terragrunt installed"
     else
         echo "terragrunt already installed"
@@ -255,14 +228,13 @@ install_non-apt_apps() {
 config_apps() {
     echo -e "\n### Apply Apps configs ###"
     # Tilix as default
-    sudo update-alternatives --install /usr/bin/x-terminal-emulator x-terminal-emulator /usr/bin/tilix 100
-    sudo update-alternatives --set x-terminal-emulator /usr/bin/tilix
+    echo "com.gexperts.Tilix.desktop" > .config/ubuntu-xdg-terminals.list
 
     # Tilix appearance
-    tilix_profile="default"
+    tilix_profile="$(gsettings get com.gexperts.Tilix.ProfilesList default | tr -d "'")"
     dconf write /com/gexperts/Tilix/profiles/"$tilix_profile"/background-transparency-percent "20"
-    dconf write /com/gexperts/Tilix/profiles/"$tilix_profile"/default-size-columns "120"
-    dconf write /com/gexperts/Tilix/profiles/"$tilix_profile"/default-size-rows "35"
+    dconf write /com/gexperts/Tilix/profiles/"$tilix_profile"/default-size-columns "140"
+    dconf write /com/gexperts/Tilix/profiles/"$tilix_profile"/default-size-rows "40"
     dconf write /com/gexperts/Tilix/profiles/"$tilix_profile"/font "'Monospace 11'"
 
 
@@ -343,9 +315,6 @@ gnome_settings() {
     gsettings set org.gnome.shell.extensions.dash-to-dock extend-height false
     gsettings set org.gnome.shell.extensions.dash-to-dock dash-max-icon-size 20
 
-    # Keyboard layout - Logitech K380
-    gsettings set org.gnome.desktop.input-sources sources "[('xkb', 'us+alt-intl'), ('xkb', 'br')]"
-
     # Show battery percentage
     gsettings set org.gnome.desktop.interface show-battery-percentage true
 
@@ -356,7 +325,15 @@ gnome_settings() {
     gsettings set org.gnome.shell.app-switcher current-workspace-only true
     gsettings set org.gnome.shell.extensions.dash-to-dock isolate-monitors true
     gsettings set org.gnome.mutter dynamic-workspaces false
-    gsettings set org.gnome.desktop.wm.preferences num-workspaces 3
+    gsettings set org.gnome.desktop.wm.preferences num-workspaces 4
+    gsettings set org.gnome.desktop.wm.keybindings switch-to-workspace-1 "['<Primary>7']"
+    gsettings set org.gnome.desktop.wm.keybindings switch-to-workspace-2 "['<Primary>8']"
+    gsettings set org.gnome.desktop.wm.keybindings switch-to-workspace-3 "['<Primary>9']"
+    gsettings set org.gnome.desktop.wm.keybindings switch-to-workspace-4 "['<Primary>0']"
+    gsettings set org.gnome.desktop.wm.keybindings move-to-workspace-1 "['<Primary><Shift>7']"
+    gsettings set org.gnome.desktop.wm.keybindings move-to-workspace-2 "['<Primary><Shift>8']"
+    gsettings set org.gnome.desktop.wm.keybindings move-to-workspace-3 "['<Primary><Shift>9']"
+    gsettings set org.gnome.desktop.wm.keybindings move-to-workspace-4 "['<Primary><Shift>0']"
 
     # Custom shortcuts
     gsettings set org.gnome.settings-daemon.plugins.media-keys custom-keybindings "['/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/', '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom1/', '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom2/', '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom3/', '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom4/']" 
@@ -384,9 +361,6 @@ gnome_settings() {
     # Disable Desktop Icons NG (DING) extension
     gnome-extensions disable ding@rastersoft.com    
 
-    # Do not Dim Screen when computer is inactive
-    gsettings set org.gnome.settings-daemon.plugins.power idle-dim false
-
     echo "Gnome preferences applied"
 }
 
@@ -394,8 +368,8 @@ gnome_extensions() {
     echo -e "\n### Gnome Extensions ###"
 
     local install_extensions=(
-        "https://extensions.gnome.org/extension-data/clipboard-historyalexsaveau.dev.v45.shell-extension.zip"
-        "https://extensions.gnome.org/extension-data/NotificationCountercoolllsk.v8.shell-extension.zip"
+        "https://extensions.gnome.org/extension-data/clipboard-historyalexsaveau.dev.v48.shell-extension.zip"
+        "https://extensions.gnome.org/extension-data/NotificationCountercoolllsk.v13.shell-extension.zip"
     )
 
     for extension in "${install_extensions[@]}"; do

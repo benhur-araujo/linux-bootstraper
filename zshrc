@@ -1,5 +1,8 @@
 ################# TERMINAL CONFIGS #######################
 
+# Control PATH var
+export PATH="/home/benhur/.terragrunt/bin:$PATH"
+
 # Set default text editor
 export EDITOR=vim
 
