@@ -1,9 +1,11 @@
 #!/bin/bash
 
-# Since I have 2 computers running Ubuntu 24.04 and I'm having a hard time keeping their configs synced, \
+# Since I have 2 computers running Ubuntu 26.04 and I'm having a hard time keeping their configs synced, \
 # I created this script to do that for me.
 
 set -eo pipefail
+
+SCRIPT_DIR="$(cd -- "$(dirname "$0")" && pwd)"
 
 # Display how to use this script
 usage() {
@@ -43,31 +45,30 @@ general_configs() {
 ########## Add APT Repositories ###########
 add_apt_repos() {
     # Terraform
-    if [[ -z "$(apt list --installed 2>/dev/null | grep 'terraform.*installed')" || "$1" == "--full" ]]; then
+    if ! command -v terraform > /dev/null 2>&1; then
         curl -sL -o gpg https://apt.releases.hashicorp.com/gpg 
         gpg --dearmor gpg && sudo mv -f gpg.gpg /usr/share/keyrings/hashicorp-archive-keyring.gpg
-        echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] \
-            https://apt.releases.hashicorp.com jammy main" | sudo tee /etc/apt/sources.list.d/hashicorp.list > /dev/null
+        echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(grep -oP '(?<=UBUNTU_CODENAME=).*' /etc/os-release || lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
         rm gpg
     fi
 
     # vscode
-    if [[ -z "$(apt list --installed 2>/dev/null | grep "^code.*installed")" || "$1" == "--full" ]]; then
+    if ! command -v code > /dev/null 2>&1; then
         wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > packages.microsoft.gpg
         sudo install -D -o root -g root -m 644 packages.microsoft.gpg /etc/apt/keyrings/packages.microsoft.gpg
-        sudo sh -c 'echo "deb [arch=amd64,arm64,armhf signed-by=/etc/apt/keyrings/packages.microsoft.gpg] https://packages.microsoft.com/repos/code stable main" > /etc/apt/sources.list.d/vscode.list'
+        sudo sh -c 'echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/packages.microsoft.gpg] https://packages.microsoft.com/repos/code stable main" > /etc/apt/sources.list.d/vscode.list'
         rm -f packages.microsoft.gpg
     fi
     
     # Github CLI
-    if [[ -z "$(apt list --installed 2>/dev/null | grep "^gh/.*installed")" || "$1" == "--full" ]]; then
+    if ! command -v gh > /dev/null 2>&1; then
         curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
         sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
         echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
     fi
 
     # Glow - CLI Markdown render
-    if [[ ! "$(which glow)" || "$1" == "--full" ]]; then
+    if ! command -v glow > /dev/null 2>&1; then
         curl -fsSL https://repo.charm.sh/apt/gpg.key | sudo gpg --yes --dearmor -o /etc/apt/keyrings/charm.gpg
         echo "deb [signed-by=/etc/apt/keyrings/charm.gpg] https://repo.charm.sh/apt/ * *" | sudo tee /etc/apt/sources.list.d/charm.list > /dev/null
     fi 
@@ -79,10 +80,12 @@ install_apt_apps() {
     apt_apps=(vim-gtk3 tree git zsh bash-completion flameshot tilix jq yq \
               wget gpg curl gnupg software-properties-common terraform apt-transport-https \
               code xdotool chrome-gnome-shell gnome-browser-connector xclip gh shellcheck ansible bat zoxide python3-pip pre-commit openconnect nmap glow)
+
     echo "### APT Packages ###"
     sudo apt update -y > /dev/null 2>&1
     sudo apt install -y "${apt_apps[@]}" > /dev/null 2>&1
-    echo "Installed Packages: ${apt_apps[@]}"
+    echo "### Installed Packages ###"
+    echo "${apt_apps[@]}"
 }
 
 ########## Non-package manager Installations ##########
@@ -279,7 +282,7 @@ config_apps() {
     echo "Tilix Configured"
 
     # vim
-    cat "$PWD"/vimrc > ~/.vimrc
+    cat "$SCRIPT_DIR"/vimrc > ~/.vimrc
 	if [ ! -d ~/.vim/pack/plugins/start/vim-terraform ]; then
 		git clone https://github.com/hashivim/vim-terraform.git ~/.vim/pack/plugins/start/vim-terraform
 		echo "vim-terraform installed"
@@ -328,7 +331,7 @@ config_apps() {
         echo "kubectl-autocomplete already installed"
     fi   
     
-    cat "$PWD"/zshrc > ~/.zshrc
+    cat "$SCRIPT_DIR"/zshrc > ~/.zshrc
     echo "Zsh configured"
 
 }
@@ -367,7 +370,7 @@ gnome_settings() {
     gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom2/ command 'bash -c "amixer set Capture toggle"'
     gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom2/ binding '<Ctrl><Alt>m'
     gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom3/ name 'Put Focus Next Monitor'
-    gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom3/ command "bash $PWD/swap-screens.sh"
+    gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom3/ command "bash $SCRIPT_DIR/swap-screens.sh"
     gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom3/ binding '<Super>Tab'
     gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom4/ name 'Sound Settings'
     gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom4/ command 'gnome-control-center sound'
