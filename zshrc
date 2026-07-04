@@ -2,6 +2,7 @@
 
 # Control PATH var
 export PATH="/home/benhur/.terragrunt/bin:$PATH"
+export PATH="$HOME/.local/bin:$PATH"
 
 # Set default text editor
 export EDITOR=vim
@@ -290,7 +291,6 @@ alias mc="cd ~/cloud/jobs/trimble/projects/ttm-platform-telematics"
 alias mcg="cd ~/cloud/jobs/trimble/projects/ttm-platform-telematics/ttm-platform-gitops"
 
 # General tools
-alias cat="batcat -f"
 alias less="batcat -f --paging=always"
 eval "$(zoxide init zsh)"
 alias cd="z"

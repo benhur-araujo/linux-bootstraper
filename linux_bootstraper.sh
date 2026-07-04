@@ -40,10 +40,28 @@ general_configs() {
 
     # Laptop Lid behavior - Ignore when closing it
     sudo sed -i "s/^#HandleLidSwitch=suspend$/HandleLidSwitch=ignore/" /etc/systemd/logind.conf
+
+    # Disable IPv6
+    sudo tee /etc/sysctl.d/99-disable-ipv6.conf >/dev/null <<EOF
+net.ipv6.conf.all.disable_ipv6 = 1
+net.ipv6.conf.default.disable_ipv6 = 1
+net.ipv6.conf.lo.disable_ipv6 = 1
+EOF
+
+    # Soft-links
+    ln -s ~/github-projects/ai-workflow/ralph ~/.claude/ralph
+    ln -s ~/github-projects/ai-workflow/docs ~/.claude/docs
+    ln -s ~/github-projects/ai-workflow/USER-CLAUDE.md ~/.claude/CLAUDE.md
+    ln -s ~/github-projects/ai-workflow/skills ~/.claude/skills
 }
+
 
 ########## Add APT Repositories ###########
 add_apt_repos() {
+    # pgAdmin
+    curl -fsS https://www.pgadmin.org/static/packages_pgadmin_org.pub | sudo gpg --dearmor -o /etc/apt/keyrings/packages-pgadmin-org.gpg
+    sudo sh -c 'echo "deb [signed-by=/etc/apt/keyrings/packages-pgadmin-org.gpg] https://ftp.postgresql.org/pub/pgadmin/pgadmin4/apt/$(lsb_release -cs) pgadmin4 main" > /etc/apt/sources.list.d/pgadmin4.list'
+
     # Terraform
     if ! command -v terraform > /dev/null 2>&1; then
         curl -sL -o gpg https://apt.releases.hashicorp.com/gpg 
@@ -72,6 +90,18 @@ add_apt_repos() {
         curl -fsSL https://repo.charm.sh/apt/gpg.key | sudo gpg --yes --dearmor -o /etc/apt/keyrings/charm.gpg
         echo "deb [signed-by=/etc/apt/keyrings/charm.gpg] https://repo.charm.sh/apt/ * *" | sudo tee /etc/apt/sources.list.d/charm.list > /dev/null
     fi 
+
+    # 1Password
+    curl -sS https://downloads.1password.com/linux/keys/1password.asc | \
+    sudo gpg --dearmor --output /usr/share/keyrings/1password-archive-keyring.gpg && \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/1password-archive-keyring.gpg] https://downloads.1password.com/linux/debian/$(dpkg --print-architecture) stable main" | \
+    sudo tee /etc/apt/sources.list.d/1password.list && \
+    sudo mkdir -p /etc/debsig/policies/AC2D62742012EA22/ && \
+    curl -sS https://downloads.1password.com/linux/debian/debsig/1password.pol | \
+    sudo tee /etc/debsig/policies/AC2D62742012EA22/1password.pol && \
+    sudo mkdir -p /usr/share/debsig/keyrings/AC2D62742012EA22 && \
+    curl -sS https://downloads.1password.com/linux/keys/1password.asc | \
+    sudo gpg --dearmor --output /usr/share/debsig/keyrings/AC2D62742012EA22/debsig.gpg
 }
 
 
@@ -79,7 +109,7 @@ add_apt_repos() {
 install_apt_apps() {
     apt_apps=(vim-gtk3 tree git zsh bash-completion flameshot tilix jq yq \
               wget gpg curl gnupg software-properties-common terraform apt-transport-https \
-              code xdotool chrome-gnome-shell gnome-browser-connector xclip gh shellcheck ansible bat zoxide python3-pip pre-commit openconnect nmap glow)
+              code xdotool chrome-gnome-shell gnome-browser-connector xclip gh shellcheck ansible bat zoxide python3-pip pre-commit openconnect nmap glow python3.14-venv python3-tk pgadmin4-desktop 1password-cli)
 
     echo "### APT Packages ###"
     sudo apt update -y > /dev/null 2>&1
@@ -220,6 +250,9 @@ install_non-apt_apps() {
     else
         echo "helm already installed"
     fi
+
+    # Claude CLI
+    curl -fsSL https://claude.ai/install.sh | bash
 }
 
 
@@ -306,6 +339,9 @@ config_apps() {
     cat "$SCRIPT_DIR"/zshrc > ~/.zshrc
     echo "Zsh configured"
 
+    # Git
+    git config --global user.email "benhur.araujo.silva@gmail.com"
+    git config --global user.name "benhur-araujo"
 }
 
 ########## Gnome Settings ##########
@@ -317,6 +353,13 @@ gnome_settings() {
 
     # Show battery percentage
     gsettings set org.gnome.desktop.interface show-battery-percentage true
+
+    # Never auto-suspend
+    gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-battery-type 'nothing'
+    gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-battery-timeout 0
+    gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-ac-type 'nothing'
+    gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-ac-timeout 0
+
 
     # Remove trash from dock
     gsettings set org.gnome.shell.extensions.dash-to-dock show-trash false
@@ -370,12 +413,14 @@ gnome_extensions() {
     local install_extensions=(
         "https://extensions.gnome.org/extension-data/clipboard-historyalexsaveau.dev.v48.shell-extension.zip"
         "https://extensions.gnome.org/extension-data/NotificationCountercoolllsk.v13.shell-extension.zip"
+        "https://extensions.gnome.org/extension-data/dash-to-paneljderose9.github.com.v73.shell-extension.zip"
+        "https://extensions.gnome.org/extension-data/space-barluchrioh.v37.shell-extension.zip"
     )
 
     for extension in "${install_extensions[@]}"; do
-        wget -qO "extension.zip" "$extension" 
-        gnome-extensions install --force "extension.zip" > /dev/null
-        rm "extension.zip"
+        wget -qO extension.zip "$extension"
+        gnome-extensions install --force extension.zip > /dev/null
+        rm extension.zip
     done
 
     local user_extensions=($(gnome-extensions list --user))
