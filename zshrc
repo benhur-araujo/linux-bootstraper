@@ -283,20 +283,13 @@ alias kd="$(which kubectl) describe"
 export dry="--dry-run=client -o yaml"
 export now="--force --grace-period 0"
 
-# Directories
-alias pp="cd ~/cloud/studies/projects/"
-alias ppc="cd ~/cloud/studies/projects/conquerproject"
-alias tp="cd ~/cloud/jobs/trimble/projects/"
-alias mc="cd ~/cloud/jobs/trimble/projects/ttm-platform-telematics"
-alias mcg="cd ~/cloud/jobs/trimble/projects/ttm-platform-telematics/ttm-platform-gitops"
-
 # General tools
 alias less="batcat -f --paging=always"
 eval "$(zoxide init zsh)"
-alias cd="z"
 alias xclip="xclip -sel clip"
+claude="claude --model claude-opus-4-8 --permission-mode bypassPermissions"
 
 # Scripts
-alias ct="bash ~/cloud/studies/projects/bash-scripts/connection-tester/connection-tester.sh"
-alias sup="bash ~/cloud/studies/projects/bash-scripts/system-updater/system_updater.sh -s"
-alias fc="bash ~/cloud/studies/projects/bash-scripts/focus-chunker/focus-chunker.sh 40"
+alias ct="bash ~/github-projects/bash-scripts/connection-tester/connection-tester.sh"
+alias sup="bash ~/github-projects/bash-scripts/system-updater/system_updater.sh -s"
+alias fc="bash ~/github-projects/bash-scripts/focus-chunker/focus-chunker.sh 40"
