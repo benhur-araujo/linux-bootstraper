@@ -7,30 +7,8 @@ set -exo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname "$0")" && pwd)"
 
-# Display how to use this script
-usage() {
-    echo "usage: $0 [--diff]  # Default. Install not installed packages"
-    echo "Usage: $0 [--full] # Install or update everything"
-    exit 1
-}
-
-# Get script option from the user
-get_opt() {
-    if [ -z "$1" ]; then
-        user_opt="--diff"
-    elif [ "$#" -eq 1 ]; then
-        case $1 in
-            --full)
-                user_opt="--full";;
-            --diff)
-                user_opt="--diff";;
-            *)
-                usage;;
-        esac
-    else
-        usage
-    fi
-}
+# source library functions
+source "$SCRIPT_DIR/libs/helpers.sh"
 
 ########## General System Preferences ###############
 general_configs() {
@@ -54,7 +32,6 @@ EOF
     ln -s ~/github-projects/ai-workflow/USER-CLAUDE.md ~/.claude/CLAUDE.md
     ln -s ~/github-projects/ai-workflow/skills ~/.claude/skills
 }
-
 
 ########## Add APT Repositories ###########
 add_apt_repos() {
@@ -107,7 +84,7 @@ add_apt_repos() {
 
 ########## Install APT Packages ##########
 install_apt_apps() {
-    apt_apps=(vim-gtk3 tree git zsh bash-completion flameshot tilix jq yq \
+    local apt_apps=(vim-gtk3 tree git zsh bash-completion flameshot tilix jq yq \
               wget gpg curl gnupg software-properties-common terraform apt-transport-https \
               code xdotool chrome-gnome-shell gnome-browser-connector xclip gh shellcheck ansible bat zoxide python3-pip pre-commit openconnect nmap glow python3.14-venv python3-tk pgadmin4-desktop 1password-cli)
 
@@ -122,7 +99,7 @@ install_apt_apps() {
 install_non-apt_apps() {
     echo -e "\n### Non-APT Packages ###"
     # Google Chrome
-    if [[ -z "$(dpkg -l | grep google-chrome)" || "$1" == "--full" ]]; then
+    if ! command -v google-chrome > /dev/null 2>&1 || $is_full_install; then
         curl -sL -o /tmp/chrome.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
         sudo dpkg -i /tmp/chrome.deb > /dev/null
         echo "Chrome Installed"
@@ -131,10 +108,8 @@ install_non-apt_apps() {
     fi
 
     # Oh My Zsh
-    if [[ ! -d ~/.oh-my-zsh || "$1" == "--full" ]]; then
-        if [ -d ~/.oh-my-zsh ]; then
-            rm -rf ~/.oh-my-zsh
-        fi
+    if [[ ! -d ~/.oh-my-zsh || $is_full_install ]]; then
+        rm -rf ~/.oh-my-zsh
         curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh -o install.sh
         sed -i '/exec\ zsh\ -l/d' install.sh
         bash install.sh > /dev/null 2>&1
@@ -145,11 +120,9 @@ install_non-apt_apps() {
     fi
 
     # asdf
-    if [[ ! -d ~/.asdf || "$1" == "--full" ]]; then
-        asdf_latest_version="$(git ls-remote --tags --sort=v:refname https://github.com/asdf-vm/asdf.git | awk -F"/" '{print $3}'| tail -1)"
-        if [ -d ~/.asdf ]; then
-            rm -rf ~/.asdf
-        fi
+    if [[ ! -d ~/.asdf || $is_full_install ]]; then
+        local asdf_latest_version="$(git ls-remote --tags --sort=v:refname https://github.com/asdf-vm/asdf.git | awk -F"/" '{print $3}'| tail -1)"
+        rm -rf ~/.asdf
         git clone -q https://github.com/asdf-vm/asdf.git ~/.asdf --branch "$asdf_latest_version" > /dev/null 2>&1
         echo "asdf Installed"
         
@@ -159,7 +132,7 @@ install_non-apt_apps() {
     fi
 
     # kubectl
-    if [[ ! -f /usr/local/bin/kubectl || "$1" == "--full" ]]; then
+    if [[ ! -f /usr/local/bin/kubectl || $is_full_install ]]; then
         curl -sLO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
         sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
         echo "Kubectl Installed"
@@ -169,7 +142,7 @@ install_non-apt_apps() {
     fi
 
     # docker
-    if [[ -z "$(dpkg -l | grep docker)" || "$1" == "--full" ]]; then
+    if [[ -z "$(dpkg -l | grep docker)" || $is_full_install ]]; then
         curl -fsSL https://get.docker.com -o get-docker.sh
         sed -i 's/sleep\ 20/sleep\ 1/' get-docker.sh
         sudo sh get-docker.sh > /dev/null 2>&1
@@ -181,13 +154,13 @@ install_non-apt_apps() {
     fi
     
     # AZURE-CLI
-    if [[ -z "$(dpkg -l | grep azure-cli)" || "$1" == "--full" ]]; then
+    if [[ -z "$(dpkg -l | grep azure-cli)" || $is_full_install ]]; then
      	curl -fsSL 'https://azurecliprod.blob.core.windows.net/$root/deb_install.sh' | sudo bash   
         sudo az aks install-cli > /dev/null 2>&1
         echo "az-cli Installed and kubelogin installed"
     else
         echo "az-cli already installed"
-        if [[ ! $(which kubelogin)  ]]; then
+        if ! command -v kubelogin > /dev/null 2>&1; then
             az aks install-cli
             echo "kubelogin installed"
         else
@@ -196,7 +169,7 @@ install_non-apt_apps() {
     fi
 
     # Terragrunt
-    if [[ ! -f /usr/local/bin/terragrunt || "$1" == "--full" ]]; then
+    if ! command -v terragrunt > /dev/null|| $is_full_install ]]; then
         curl -sSfL --proto '=https' --tlsv1.2 https://terragrunt.com/install | bash
         echo "terragrunt installed"
     else
@@ -204,7 +177,7 @@ install_non-apt_apps() {
     fi    
 
     # Terraform-docs
-    if [[ ! -f /usr/local/bin/terraform-docs || "$1" == "--full" ]]; then
+    if [[ ! -f /usr/local/bin/terraform-docs || $is_full_install ]]; then
         curl -sLo /tmp/terraform-docs.tar.gz https://github.com/terraform-docs/terraform-docs/releases/download/v0.17.0/terraform-docs-v0.17.0-$(uname)-amd64.tar.gz
         tar -xzf /tmp/terraform-docs.tar.gz -C /tmp
         chmod +x /tmp/terraform-docs
@@ -215,8 +188,8 @@ install_non-apt_apps() {
     fi
     
     # K9S
-    if [[ ! -f /usr/bin/k9s || "$1" == "--full" ]]; then
-        k9s_latest_version="$(git ls-remote --tags --sort=v:refname https://github.com/derailed/k9s.git | awk -F"/" '{print $3}'| tail -1 | sed 's/\^{}//')"
+    if [[ ! -f /usr/bin/k9s || $is_full_install ]]; then
+        local k9s_latest_version="$(git ls-remote --tags --sort=v:refname https://github.com/derailed/k9s.git | awk -F"/" '{print $3}'| tail -1 | sed 's/\^{}//')"
         wget -q https://github.com/derailed/k9s/releases/download/"$k9s_latest_version"/k9s_linux_amd64.deb
         sudo apt install ./k9s_linux_amd64.deb > /dev/null 2>&1
         rm k9s_linux_amd64.deb
@@ -225,8 +198,8 @@ install_non-apt_apps() {
     fi
 
     # ArgoCD CLI
-    if [[ ! -f /usr/local/bin/argocd || "$1" == "--full" ]]; then
-        ARGOCD_VERSION=$(curl --silent "https://api.github.com/repos/argoproj/argo-cd/releases/latest" | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/')
+    if [[ ! -f /usr/local/bin/argocd || $is_full_install ]]; then
+        local ARGOCD_VERSION=$(curl --silent "https://api.github.com/repos/argoproj/argo-cd/releases/latest" | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/')
         curl -sSL -o /tmp/argocd-${ARGOCD_VERSION} https://github.com/argoproj/argo-cd/releases/download/${ARGOCD_VERSION}/argocd-linux-amd64
         chmod +x /tmp/argocd-${ARGOCD_VERSION}
         sudo mv /tmp/argocd-${ARGOCD_VERSION} /usr/local/bin/argocd
@@ -235,7 +208,7 @@ install_non-apt_apps() {
     fi
     
     # MiniKube
-    if [[ ! "$(which minikube)" || "$1" == "--full" ]]; then
+    if ! command -v minikube > /dev/null 2>&1 || $is_full_install; then
         curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
         sudo install minikube-linux-amd64 /usr/local/bin/minikube
         rm minikube-linux-amd64
@@ -244,7 +217,7 @@ install_non-apt_apps() {
     fi
 
     # Helm
-    if [[ ! "$(which helm)" || "$1" == "--full" ]]; then
+    if ! command -v helm > /dev/null 2>&1 || $is_full_install; then
         curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
         helm completion zsh | sudo tee "${fpath[1]}/_helm" > /dev/null
     else
@@ -264,7 +237,7 @@ config_apps() {
     echo "com.gexperts.Tilix.desktop" > .config/ubuntu-xdg-terminals.list
 
     # Tilix appearance
-    tilix_profile="$(gsettings get com.gexperts.Tilix.ProfilesList default | tr -d "'")"
+    local tilix_profile="$(gsettings get com.gexperts.Tilix.ProfilesList default | tr -d "'")"
     dconf write /com/gexperts/Tilix/profiles/"$tilix_profile"/background-transparency-percent "20"
     dconf write /com/gexperts/Tilix/profiles/"$tilix_profile"/default-size-columns "140"
     dconf write /com/gexperts/Tilix/profiles/"$tilix_profile"/default-size-rows "40"
@@ -287,11 +260,11 @@ config_apps() {
     echo "Tilix Configured"
 
     # vim
-    cat "$SCRIPT_DIR"/vimrc > ~/.vimrc
+    cp "$SCRIPT_DIR"/vimrc ~/.vimrc
 	if [ ! -d ~/.vim/pack/plugins/start/vim-terraform ]; then
 		git clone https://github.com/hashivim/vim-terraform.git ~/.vim/pack/plugins/start/vim-terraform
 		echo "vim-terraform installed"
-    elif [[ -d ~/.vim/pack/plugins/start/vim-terraform && "$1" == "--full" ]]; then
+    elif [[ -d ~/.vim/pack/plugins/start/vim-terraform && $is_full_install ]]; then
 		rm -rf ~/.vim/pack/plugins/start/vim-terraform
 		git clone https://github.com/hashivim/vim-terraform.git ~/.vim/pack/plugins/start/vim-terraform
 		echo "vim-terraform updated"
@@ -304,7 +277,7 @@ config_apps() {
     if [ ! -d ~/.oh-my-zsh/custom/plugins/zsh-autosuggestions ]; then
         git clone -q https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions
         echo "zsh-autosuggestions Installed"
-    elif [[ -d ~/.oh-my-zsh/plugins/zsh-autosuggestions && "$1" == "--full" ]]; then
+    elif [[ -d ~/.oh-my-zsh/plugins/zsh-autosuggestions && $is_full_install ]]; then
         rm -rf ~/.oh-my-zsh/plugins/zsh-autosuggestions
         git clone -q https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting
         echo "zsh-autosuggestions Updated"
@@ -315,7 +288,7 @@ config_apps() {
 	if [ ! -d ~/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting ]; then
         git clone -q https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting
         echo "zsh-syntax-highlighting Installed"
-    elif [[ -d ~/.oh-my-zsh/plugins/zsh-syntax-highlighting && "$1" == "--full" ]]; then
+    elif [[ -d ~/.oh-my-zsh/plugins/zsh-syntax-highlighting && $is_full_install ]]; then
         rm -rf ~/.oh-my-zsh/plugins/zsh-syntax-highlighting
         git clone -q https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting
         echo "zsh-syntax-highlighting Updated"
@@ -327,7 +300,7 @@ config_apps() {
         mkdir -p ~/.oh-my-zsh/custom/plugins/kubectl-autocomplete
         kubectl completion zsh > ~/.oh-my-zsh/custom/plugins/kubectl-autocomplete/kubectl-autocomplete.plugin.zsh
         echo "kubectl-autocomplete installed"
-    elif [[ -d ~/.oh-my-zsh/custom/plugins/kubectl-autocomplete && "$1" == "--full" ]]; then
+    elif [[ -d ~/.oh-my-zsh/custom/plugins/kubectl-autocomplete && $is_full_install ]]; then
         rm -rf ~/.oh-my-zsh/custom/plugins/kubectl-autocomplete
         mkdir -p ~/.oh-my-zsh/custom/plugins/kubectl-autocomplete
         kubectl completion zsh > ~/.oh-my-zsh/custom/plugins/kubectl-autocomplete/kubectl-autocomplete.plugin.zsh
@@ -336,7 +309,7 @@ config_apps() {
         echo "kubectl-autocomplete already installed"
     fi   
     
-    cat "$SCRIPT_DIR"/zshrc > ~/.zshrc
+    cp "$SCRIPT_DIR"/zshrc ~/.zshrc
     echo "Zsh configured"
 
     # Git
@@ -379,7 +352,7 @@ gnome_settings() {
     gsettings set org.gnome.desktop.wm.keybindings move-to-workspace-4 "['<Primary><Shift>0']"
 
     # Custom shortcuts
-    gsettings set org.gnome.settings-daemon.plugins.media-keys custom-keybindings "['/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/', '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom1/', '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom2/', '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom3/', '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom4/']" 
+    gsettings set org.gnome.settings-daemon.plugins.media-keys custom-keybindings "['/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/', '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom1/', '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom2/', '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom3/']"
     gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/ name 'bluetooth settings'
     gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/ command 'gnome-control-center bluetooth'
     gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/ binding '<Ctrl><Alt>b'
@@ -389,12 +362,9 @@ gnome_settings() {
     gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom2/ name 'Mute Mic'
     gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom2/ command 'bash -c "amixer set Capture toggle"'
     gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom2/ binding '<Ctrl><Alt>m'
-    gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom3/ name 'Put Focus Next Monitor'
-    gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom3/ command "bash $SCRIPT_DIR/swap-screens.sh"
-    gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom3/ binding '<Super>Tab'
-    gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom4/ name 'Sound Settings'
-    gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom4/ command 'gnome-control-center sound'
-    gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom4/ binding '<Ctrl><Alt>s'
+    gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom3/ name 'Sound Settings'
+    gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom3/ command 'gnome-control-center sound'
+    gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom3/ binding '<Ctrl><Alt>s'
     
     # Change default Shortcuts
     gsettings set org.gnome.settings-daemon.plugins.media-keys home "['<Super>e']"
@@ -432,7 +402,7 @@ gnome_extensions() {
 
 
 main() {
-    param="${1:---diff}"
+    local param="${1:---diff}"
     
     get_opt "$param"
     general_configs
