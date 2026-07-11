@@ -260,7 +260,7 @@ config_apps() {
     echo "Tilix Configured"
 
     # vim
-    cp "$SCRIPT_DIR"/vimrc ~/.vimrc
+    cp "$SCRIPT_DIR"/configs/vimrc ~/.vimrc
 	if [ ! -d ~/.vim/pack/plugins/start/vim-terraform ]; then
 		git clone https://github.com/hashivim/vim-terraform.git ~/.vim/pack/plugins/start/vim-terraform
 		echo "vim-terraform installed"
@@ -309,7 +309,7 @@ config_apps() {
         echo "kubectl-autocomplete already installed"
     fi   
     
-    cp "$SCRIPT_DIR"/zshrc ~/.zshrc
+    cp "$SCRIPT_DIR"/configs/zshrc ~/.zshrc
     echo "Zsh configured"
 
     # Git
