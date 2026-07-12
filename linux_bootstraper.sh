@@ -1,11 +1,12 @@
 #!/bin/bash
 
-# Since I have 2 computers running Ubuntu 26.04 and I'm having a hard time keeping their configs synced, \
-# I created this script to do that for me.
+# I have 2 computers running Ubuntu 26.04. I'm having a hard time keeping their configs synced.
+# I've created this script to do that for me.
 
 set -exo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname "$0")" && pwd)"
+readonly SCRIPT_DIR
 
 # source library functions
 source "$SCRIPT_DIR/libs/helpers.sh"
@@ -36,11 +37,13 @@ EOF
 ########## Add APT Repositories ###########
 add_apt_repos() {
     # pgAdmin
-    curl -fsS https://www.pgadmin.org/static/packages_pgadmin_org.pub | sudo gpg --dearmor -o /etc/apt/keyrings/packages-pgadmin-org.gpg
-    sudo sh -c 'echo "deb [signed-by=/etc/apt/keyrings/packages-pgadmin-org.gpg] https://ftp.postgresql.org/pub/pgadmin/pgadmin4/apt/$(lsb_release -cs) pgadmin4 main" > /etc/apt/sources.list.d/pgadmin4.list'
+    if [[ ! -f /usr/pgadmin4/bin/pgadmin4 ]]; then
+        curl -fsS https://www.pgadmin.org/static/packages_pgadmin_org.pub | sudo gpg --dearmor -o /etc/apt/keyrings/packages-pgadmin-org.gpg
+        sudo sh -c 'echo "deb [signed-by=/etc/apt/keyrings/packages-pgadmin-org.gpg] https://ftp.postgresql.org/pub/pgadmin/pgadmin4/apt/$(lsb_release -cs) pgadmin4 main" > /etc/apt/sources.list.d/pgadmin4.list'
+    fi
 
     # Terraform
-    if ! command -v terraform > /dev/null 2>&1; then
+    if ! has_command terraform; then
         curl -sL -o gpg https://apt.releases.hashicorp.com/gpg 
         gpg --dearmor gpg && sudo mv -f gpg.gpg /usr/share/keyrings/hashicorp-archive-keyring.gpg
         echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(grep -oP '(?<=UBUNTU_CODENAME=).*' /etc/os-release || lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
@@ -48,7 +51,7 @@ add_apt_repos() {
     fi
 
     # vscode
-    if ! command -v code > /dev/null 2>&1; then
+    if ! has_command code; then
         wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > packages.microsoft.gpg
         sudo install -D -o root -g root -m 644 packages.microsoft.gpg /etc/apt/keyrings/packages.microsoft.gpg
         sudo sh -c 'echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/packages.microsoft.gpg] https://packages.microsoft.com/repos/code stable main" > /etc/apt/sources.list.d/vscode.list'
@@ -56,55 +59,66 @@ add_apt_repos() {
     fi
     
     # Github CLI
-    if ! command -v gh > /dev/null 2>&1; then
+    if ! has_command gh; then
         curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
         sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
         echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
     fi
 
     # Glow - CLI Markdown render
-    if ! command -v glow > /dev/null 2>&1; then
+    if ! has_command glow; then
         curl -fsSL https://repo.charm.sh/apt/gpg.key | sudo gpg --yes --dearmor -o /etc/apt/keyrings/charm.gpg
         echo "deb [signed-by=/etc/apt/keyrings/charm.gpg] https://repo.charm.sh/apt/ * *" | sudo tee /etc/apt/sources.list.d/charm.list > /dev/null
     fi 
 
     # 1Password
-    curl -sS https://downloads.1password.com/linux/keys/1password.asc | \
-    sudo gpg --dearmor --output /usr/share/keyrings/1password-archive-keyring.gpg && \
-    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/1password-archive-keyring.gpg] https://downloads.1password.com/linux/debian/$(dpkg --print-architecture) stable main" | \
-    sudo tee /etc/apt/sources.list.d/1password.list && \
-    sudo mkdir -p /etc/debsig/policies/AC2D62742012EA22/ && \
-    curl -sS https://downloads.1password.com/linux/debian/debsig/1password.pol | \
-    sudo tee /etc/debsig/policies/AC2D62742012EA22/1password.pol && \
-    sudo mkdir -p /usr/share/debsig/keyrings/AC2D62742012EA22 && \
-    curl -sS https://downloads.1password.com/linux/keys/1password.asc | \
-    sudo gpg --dearmor --output /usr/share/debsig/keyrings/AC2D62742012EA22/debsig.gpg
+    if ! has_command op; then
+        curl -sS https://downloads.1password.com/linux/keys/1password.asc | \
+        sudo gpg --dearmor --output /usr/share/keyrings/1password-archive-keyring.gpg && \
+        echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/1password-archive-keyring.gpg] https://downloads.1password.com/linux/debian/$(dpkg --print-architecture) stable main" | \
+        sudo tee /etc/apt/sources.list.d/1password.list && \
+        sudo mkdir -p /etc/debsig/policies/AC2D62742012EA22/ && \
+        curl -sS https://downloads.1password.com/linux/debian/debsig/1password.pol | \
+        sudo tee /etc/debsig/policies/AC2D62742012EA22/1password.pol && \
+        sudo mkdir -p /usr/share/debsig/keyrings/AC2D62742012EA22 && \
+        curl -sS https://downloads.1password.com/linux/keys/1password.asc | \
+        sudo gpg --dearmor --output /usr/share/debsig/keyrings/AC2D62742012EA22/debsig.gpg
+    fi
 }
 
 
 ########## Install APT Packages ##########
+install_dependencies() {
+    sudo apt update -y > /dev/null 2>&1
+    sudo apt install -y \
+        curl \
+        wget \
+        gpg \
+        software-properties-common > /dev/null 2>&1
+}
+
 install_apt_apps() {
     local apt_apps=(vim-gtk3 tree git zsh bash-completion flameshot tilix jq yq \
-              wget gpg curl gnupg software-properties-common terraform apt-transport-https \
+              gnupg terraform apt-transport-https \
               code xdotool chrome-gnome-shell gnome-browser-connector xclip gh shellcheck ansible bat zoxide python3-pip pre-commit openconnect nmap glow python3.14-venv python3-tk pgadmin4-desktop 1password-cli)
 
-    echo "### APT Packages ###"
-    sudo apt update -y > /dev/null 2>&1
+    log "### APT Packages ###"
     sudo apt install -y "${apt_apps[@]}" > /dev/null 2>&1
-    echo "### Installed Packages ###"
-    echo "${apt_apps[@]}"
+    log "### Installed Packages ###"
+    log "${apt_apps[@]}"
 }
 
 ########## Non-package manager Installations ##########
-install_non-apt_apps() {
-    echo -e "\n### Non-APT Packages ###"
+install_external_apps() {
+    log -e "\n### Non-APT Packages ###"
+
     # Google Chrome
-    if ! command -v google-chrome > /dev/null 2>&1 || $is_full_install; then
+    if ! has_command google-chrome || $is_full_install; then
         curl -sL -o /tmp/chrome.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
         sudo dpkg -i /tmp/chrome.deb > /dev/null
-        echo "Chrome Installed"
+        log "Chrome Installed"
     else
-        echo "Chrome already installed"
+        log "Chrome already installed"
     fi
 
     # Oh My Zsh
@@ -113,115 +127,115 @@ install_non-apt_apps() {
         curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh -o install.sh
         sed -i '/exec\ zsh\ -l/d' install.sh
         bash install.sh > /dev/null 2>&1
-        echo "Oh My Zsh installed"
+        log "Oh My Zsh installed"
         rm install.sh
     else
-        echo "oh-my-zsh already installed"
+        log "oh-my-zsh already installed"
     fi
 
     # asdf
-    if [[ ! -d ~/.asdf || $is_full_install ]]; then
+    if ! has_command asdf || $is_full_install; then
         local asdf_latest_version="$(git ls-remote --tags --sort=v:refname https://github.com/asdf-vm/asdf.git | awk -F"/" '{print $3}'| tail -1)"
         rm -rf ~/.asdf
         git clone -q https://github.com/asdf-vm/asdf.git ~/.asdf --branch "$asdf_latest_version" > /dev/null 2>&1
-        echo "asdf Installed"
+        log "asdf Installed"
         
     else
-        echo "asdf already installed"
+        log "asdf already installed"
 
     fi
 
     # kubectl
-    if [[ ! -f /usr/local/bin/kubectl || $is_full_install ]]; then
+    if ! has_command kubectl || $is_full_install; then
         curl -sLO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
         sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
-        echo "Kubectl Installed"
+        log "Kubectl Installed"
         rm -f kubectl
     else 
-        echo "kubectl already installed"
+        log "kubectl already installed"
     fi
 
     # docker
-    if [[ -z "$(dpkg -l | grep docker)" || $is_full_install ]]; then
+    if ! has_command docker || $is_full_install; then
         curl -fsSL https://get.docker.com -o get-docker.sh
         sed -i 's/sleep\ 20/sleep\ 1/' get-docker.sh
         sudo sh get-docker.sh > /dev/null 2>&1
-        sudo usermod -aG docker $USER
-        echo "Docker Installed"
+        sudo usermod -aG docker "$USER"
+        log "Docker Installed"
         rm -f get-docker.sh
     else
-        echo "Docker already installed"
+        log "Docker already installed"
     fi
     
     # AZURE-CLI
-    if [[ -z "$(dpkg -l | grep azure-cli)" || $is_full_install ]]; then
+    if ! has_command az || $is_full_install; then
      	curl -fsSL 'https://azurecliprod.blob.core.windows.net/$root/deb_install.sh' | sudo bash   
         sudo az aks install-cli > /dev/null 2>&1
-        echo "az-cli Installed and kubelogin installed"
+        log "az-cli Installed and kubelogin installed"
     else
-        echo "az-cli already installed"
-        if ! command -v kubelogin > /dev/null 2>&1; then
+        log "az-cli already installed"
+        if ! has_command kubelogin; then
             az aks install-cli
-            echo "kubelogin installed"
+            log "kubelogin installed"
         else
-            echo "kubelogin already installed"
+            log "kubelogin already installed"
         fi
     fi
 
     # Terragrunt
-    if ! command -v terragrunt > /dev/null|| $is_full_install ]]; then
+    if ! has_command terragrunt || $is_full_install ]]; then
         curl -sSfL --proto '=https' --tlsv1.2 https://terragrunt.com/install | bash
-        echo "terragrunt installed"
+        log "terragrunt installed"
     else
-        echo "terragrunt already installed"
+        log "terragrunt already installed"
     fi    
 
     # Terraform-docs
-    if [[ ! -f /usr/local/bin/terraform-docs || $is_full_install ]]; then
+    if ! has_command terraform-docs || $is_full_install; then
         curl -sLo /tmp/terraform-docs.tar.gz https://github.com/terraform-docs/terraform-docs/releases/download/v0.17.0/terraform-docs-v0.17.0-$(uname)-amd64.tar.gz
         tar -xzf /tmp/terraform-docs.tar.gz -C /tmp
         chmod +x /tmp/terraform-docs
         sudo mv /tmp/terraform-docs /usr/local/bin/terraform-docs
         echo "Terraform-docs installed"
     else
-        echo "terraform-docs already installed"
+        log "terraform-docs already installed"
     fi
     
     # K9S
-    if [[ ! -f /usr/bin/k9s || $is_full_install ]]; then
+    if ! has_command k9s || $is_full_install; then
         local k9s_latest_version="$(git ls-remote --tags --sort=v:refname https://github.com/derailed/k9s.git | awk -F"/" '{print $3}'| tail -1 | sed 's/\^{}//')"
         wget -q https://github.com/derailed/k9s/releases/download/"$k9s_latest_version"/k9s_linux_amd64.deb
         sudo apt install ./k9s_linux_amd64.deb > /dev/null 2>&1
         rm k9s_linux_amd64.deb
     else
-        echo "K9S already installed"
+        log "K9S already installed"
     fi
 
     # ArgoCD CLI
-    if [[ ! -f /usr/local/bin/argocd || $is_full_install ]]; then
-        local ARGOCD_VERSION=$(curl --silent "https://api.github.com/repos/argoproj/argo-cd/releases/latest" | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/')
-        curl -sSL -o /tmp/argocd-${ARGOCD_VERSION} https://github.com/argoproj/argo-cd/releases/download/${ARGOCD_VERSION}/argocd-linux-amd64
-        chmod +x /tmp/argocd-${ARGOCD_VERSION}
-        sudo mv /tmp/argocd-${ARGOCD_VERSION} /usr/local/bin/argocd
+    if has_command argocd || $is_full_install; then
+        local argocd_version="$(curl --silent "https://api.github.com/repos/argoproj/argo-cd/releases/latest" | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/')"
+        curl -sSL -o /tmp/argocd-${argocd_version} https://github.com/argoproj/argo-cd/releases/download/${argocd_version}/argocd-linux-amd64
+        chmod +x /tmp/argocd-${argocd_version}
+        sudo mv /tmp/argocd-${argocd_version} /usr/local/bin/argocd
     else
-        echo "ArgoCD CLI already installed"
+        log "ArgoCD CLI already installed"
     fi
     
     # MiniKube
-    if ! command -v minikube > /dev/null 2>&1 || $is_full_install; then
+    if ! has_command kubelogin || $is_full_install; then
         curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
         sudo install minikube-linux-amd64 /usr/local/bin/minikube
         rm minikube-linux-amd64
     else
-        echo "Minikube already installed"
+        log "Minikube already installed"
     fi
 
     # Helm
-    if ! command -v helm > /dev/null 2>&1 || $is_full_install; then
+    if ! has_command helm || $is_full_install; then
         curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
         helm completion zsh | sudo tee "${fpath[1]}/_helm" > /dev/null
     else
-        echo "helm already installed"
+        log "helm already installed"
     fi
 
     # Claude CLI
@@ -232,7 +246,7 @@ install_non-apt_apps() {
 
 ########## Configure Applications ###########
 config_apps() {
-    echo -e "\n### Apply Apps configs ###"
+    log -e "\n### Apply Apps configs ###"
     # Tilix as default
     echo "com.gexperts.Tilix.desktop" > .config/ubuntu-xdg-terminals.list
 
@@ -257,60 +271,60 @@ config_apps() {
     dconf write /com/gexperts/Tilix/keybindings/terminal-page-down "'Page_Down'"
     dconf write /com/gexperts/Tilix/keybindings/terminal-page-up "'Page_Up'"
     dconf write /com/gexperts/Tilix/keybindings/terminal-zoom-out "'<Ctrl>underscore'"
-    echo "Tilix Configured"
+    log "Tilix Configured"
 
     # vim
     cp "$SCRIPT_DIR"/configs/vimrc ~/.vimrc
-	if [ ! -d ~/.vim/pack/plugins/start/vim-terraform ]; then
+	if [[ ! -d ~/.vim/pack/plugins/start/vim-terraform ]]; then
 		git clone https://github.com/hashivim/vim-terraform.git ~/.vim/pack/plugins/start/vim-terraform
-		echo "vim-terraform installed"
+		log "vim-terraform installed"
     elif [[ -d ~/.vim/pack/plugins/start/vim-terraform && $is_full_install ]]; then
 		rm -rf ~/.vim/pack/plugins/start/vim-terraform
 		git clone https://github.com/hashivim/vim-terraform.git ~/.vim/pack/plugins/start/vim-terraform
-		echo "vim-terraform updated"
+		log "vim-terraform updated"
 	else
-		echo "vim-terraform already installed"
+		log "vim-terraform already installed"
 	fi
-	echo "Vim configured"
+	log "Vim configured"
 
     # ZSH
-    if [ ! -d ~/.oh-my-zsh/custom/plugins/zsh-autosuggestions ]; then
+    if [[ ! -d ~/.oh-my-zsh/custom/plugins/zsh-autosuggestions ]]; then
         git clone -q https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions
-        echo "zsh-autosuggestions Installed"
+        log "zsh-autosuggestions Installed"
     elif [[ -d ~/.oh-my-zsh/plugins/zsh-autosuggestions && $is_full_install ]]; then
         rm -rf ~/.oh-my-zsh/plugins/zsh-autosuggestions
         git clone -q https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting
-        echo "zsh-autosuggestions Updated"
+        log "zsh-autosuggestions Updated"
     else
-        echo "zsh-autosuggestions already installed"
+        log "zsh-autosuggestions already installed"
     fi
     
-	if [ ! -d ~/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting ]; then
+	if [[ ! -d ~/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting ]]; then
         git clone -q https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting
-        echo "zsh-syntax-highlighting Installed"
+        log "zsh-syntax-highlighting Installed"
     elif [[ -d ~/.oh-my-zsh/plugins/zsh-syntax-highlighting && $is_full_install ]]; then
         rm -rf ~/.oh-my-zsh/plugins/zsh-syntax-highlighting
         git clone -q https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting
-        echo "zsh-syntax-highlighting Updated"
+        log "zsh-syntax-highlighting Updated"
     else
-        echo "zsh-syntax-highlighting already installed"
+        log "zsh-syntax-highlighting already installed"
     fi   
 	
-    if [ ! -d ~/.oh-my-zsh/custom/plugins/kubectl-autocomplete ]; then
+    if [[ ! -d ~/.oh-my-zsh/custom/plugins/kubectl-autocomplete ]]; then
         mkdir -p ~/.oh-my-zsh/custom/plugins/kubectl-autocomplete
         kubectl completion zsh > ~/.oh-my-zsh/custom/plugins/kubectl-autocomplete/kubectl-autocomplete.plugin.zsh
-        echo "kubectl-autocomplete installed"
+        log "kubectl-autocomplete installed"
     elif [[ -d ~/.oh-my-zsh/custom/plugins/kubectl-autocomplete && $is_full_install ]]; then
         rm -rf ~/.oh-my-zsh/custom/plugins/kubectl-autocomplete
         mkdir -p ~/.oh-my-zsh/custom/plugins/kubectl-autocomplete
         kubectl completion zsh > ~/.oh-my-zsh/custom/plugins/kubectl-autocomplete/kubectl-autocomplete.plugin.zsh
-        echo "kubectl-autocomplete Updated"
+        log "kubectl-autocomplete Updated"
     else
-        echo "kubectl-autocomplete already installed"
+        log "kubectl-autocomplete already installed"
     fi   
     
     cp "$SCRIPT_DIR"/configs/zshrc ~/.zshrc
-    echo "Zsh configured"
+    log "Zsh configured"
 
     # Git
     git config --global user.email "benhur.araujo.silva@gmail.com"
@@ -319,7 +333,7 @@ config_apps() {
 
 ########## Gnome Settings ##########
 gnome_settings() {
-    echo -e "\n### Gnome Preferences ###"
+    log -e "\n### Gnome Preferences ###"
     # Ubuntu Dock
     gsettings set org.gnome.shell.extensions.dash-to-dock extend-height false
     gsettings set org.gnome.shell.extensions.dash-to-dock dash-max-icon-size 20
@@ -374,11 +388,11 @@ gnome_settings() {
     # Disable Desktop Icons NG (DING) extension
     gnome-extensions disable ding@rastersoft.com    
 
-    echo "Gnome preferences applied"
+    log "Gnome preferences applied"
 }
 
 gnome_extensions() {
-    echo -e "\n### Gnome Extensions ###"
+    log -e "\n### Gnome Extensions ###"
 
     local install_extensions=(
         "https://extensions.gnome.org/extension-data/clipboard-historyalexsaveau.dev.v48.shell-extension.zip"
@@ -396,23 +410,24 @@ gnome_extensions() {
     local user_extensions=($(gnome-extensions list --user))
     for extension in "${user_extensions[@]}"; do
         gnome-extensions enable "$extension"
-        echo "$extension installed"
+        log "$extension installed"
     done
 }
 
 
 main() {
     local param="${1:---diff}"
-    
     get_opt "$param"
+    install_dependencies
+
     general_configs
-    add_apt_repos "$param"
+    add_apt_repos
     install_apt_apps
-    install_non-apt_apps "$param"
-    config_apps "$param"
+    install_external_apps
+    config_apps
     gnome_settings
     gnome_extensions
-    echo -e "\n##### Finished! ######"
+    log -e "\n##### Finished! ######"
 }
 
 main "$1"

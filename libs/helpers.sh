@@ -7,25 +7,26 @@ has_command() {
 
 # Display how to use this script
 usage() {
-    echo "usage: $0 [--diff]  # Default. Install not installed packages"
-    echo "Usage: $0 [--full] # Install or update everything"
+    cat >&2 <<EOF
+usage: $0 [--diff]  # Default. Install not installed packages
+Usage: $0 [--full] # Install or update everything
+EOF
     exit 1
 }
 
 # Get script option from the user
 get_opt() {
-    if [ -z "$1" ]; then
-        is_full_install=false
-    elif [ "$#" -eq 1 ]; then
-        case $1 in
-            --full)
-                is_full_install=true;;
-            --diff)
-                is_full_install=false;;
-            *)
-                usage;;
-        esac
-    else
-        usage
-    fi
+    case $1 in
+        --full)
+            is_full_install=true;;
+        --diff)
+            is_full_install=false;;
+        *)
+            usage;;
+    esac
+}
+
+# Log helper
+log() {
+    echo "$@"
 }
