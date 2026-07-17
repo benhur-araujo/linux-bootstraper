@@ -28,10 +28,11 @@ net.ipv6.conf.lo.disable_ipv6 = 1
 EOF
 
     # Soft-links
-    ln -s ~/github-projects/ai-workflow/ralph ~/.claude/ralph
     ln -s ~/github-projects/ai-workflow/docs ~/.claude/docs
     ln -s ~/github-projects/ai-workflow/USER-CLAUDE.md ~/.claude/CLAUDE.md
     ln -s ~/github-projects/ai-workflow/skills ~/.claude/skills
+    ln -s ~/github-projects/ai-workflow/statusline-command.sh ~/.claude/statusline-command.sh
+    ln -s ~/github-projects/ai-workflow/settings.json ~/.claude/settings.json
 
     # Keep session manager running when I'm not logged in
     sudo loginctl enable-linger "$USER"
